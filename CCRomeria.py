@@ -103,42 +103,47 @@ def cargar_datos(gid):
 df = cargar_datos("0")
 df_a = cargar_datos("222722358")
 
-# --- CONTROL DE ACCESO SILENCIOSO POR LOCALSTORAGE ---
+# --- CONTROL DE ACCESO FIJO POR PARÁMETROS INTERNOS ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
-if 'dispositivo_id' not in st.session_state:
-    st.session_state.dispositivo_id = None
+if 'datos' not in st.session_state:
+    st.session_state.datos = None
 
-# Recibe el ID del navegador y el correo de forma interna usando canales de comunicación HTML5 rápidos
-device_js = """
+# Script inyectado para guardar y persistir la sesión directo en el teléfono
+cookie_js = """
 <script>
-    let devId = localStorage.getItem('ccr_device_id');
-    if (!devId) {
-        devId = 'CCR-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '-' + Date.now().toString().substr(-4);
-        localStorage.setItem('ccr_device_id', devId);
-    }
-    window.parent.postMessage({type: 'streamlit:setComponentValue', value: devId}, '*');
-    
-    // Auto-login si la sesión existe de forma local en el teléfono
-    const email = localStorage.getItem('ccr_email');
-    if (email) {
-        window.parent.postMessage({type: 'streamlit:setComponentValue', email_value: email}, '*');
+    const emailGuardado = localStorage.getItem('ccr_email_v2');
+    if (emailGuardado && !window.location.href.includes('logged=')) {
+        const separator = window.location.href.includes('?') ? '&' : '?';
+        window.location.href = window.location.href + separator + 'logged=' + encodeURIComponent(emailGuardado);
     }
 </script>
 """
-st.html(device_js)
+st.html(cookie_js)
 
-# Lógica de respaldo seguro si la conexión en la nube tarda en sincronizar el hardware
+# Leer parámetros silenciosos si se refresca la pantalla
+query_params = st.query_params
+if "logged" in query_params and not st.session_state.autenticado:
+    correo_recuperado = query_params["logged"].strip().lower()
+    if not df.empty:
+        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
+        u = df[df.iloc[:, 0] == correo_recuperado]
+        if not u.empty:
+            st.session_state.datos = u.iloc[0]
+            st.session_state.autenticado = True
+
+# Procesamiento de Tokens de Seguridad
 if 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-    hash_correo = hashlib.md5(st.session_state.ccr_email_input.encode()).hexdigest().upper()
-    id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
-elif not df.empty and st.session_state.autenticado:
-    u_tmp = st.session_state.datos
-    correo_actual = str(u_tmp.iloc[0]).strip().lower()
-    hash_correo = hashlib.md5(correo_actual.encode()).hexdigest().upper()
-    id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
+    correo_base = st.session_state.ccr_email_input
+elif "logged" in query_params:
+    correo_base = query_params["logged"]
+elif st.session_state.datos is not None:
+    correo_base = str(st.session_state.datos.iloc[0])
 else:
-    id_del_celular_actual = "CCR-PROCESANDO-RED"
+    correo_base = "invitado"
+
+hash_correo = hashlib.md5(correo_base.strip().lower().encode()).hexdigest().upper()
+id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
 
 st.title("🏠 Intranet CCR")
 
@@ -153,7 +158,14 @@ if not st.session_state.autenticado:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
                 
-                st.html(f"""<script>localStorage.setItem('ccr_email', '{email_input}');</script>""")
+                # Fijar permanentemente en el almacenamiento del celular
+                st.html(f"""
+                <script>
+                    localStorage.setItem('ccr_email_v2', '{email_input}');
+                    const separator = window.location.href.includes('?') ? '&' : '?';
+                    window.location.href = window.location.href + separator + 'logged={email_input}';
+                </script>
+                """)
                 st.rerun()
             else:
                 st.error("Correo no registrado.")
@@ -174,7 +186,9 @@ else:
         """, unsafe_allow_html=True)
         if st.button("Cerrar"):
             st.session_state.autenticado = False
-            st.html("""<script>localStorage.removeItem('ccr_email');</script>""")
+            st.session_state.datos = None
+            st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -189,7 +203,9 @@ else:
         """, unsafe_allow_html=True)
         if st.button("Salir"):
             st.session_state.autenticado = False
-            st.html("""<script>localStorage.removeItem('ccr_email');</script>""")
+            st.session_state.datos = None
+            st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
             
     else:
@@ -250,6 +266,7 @@ else:
 
         if st.button("Cerrar Sesión"):
             st.session_state.autenticado = False
-            js_clear = """<script>localStorage.removeItem('ccr_email');</script>"""
-            st.html(js_clear)
+            st.session_state.datos = None
+            st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
