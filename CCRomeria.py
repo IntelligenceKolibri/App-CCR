@@ -103,42 +103,29 @@ def cargar_datos(gid):
 df = cargar_datos("0")
 df_a = cargar_datos("222722358")
 
-# --- CONTROL DE ACCESO FIJO POR PARÁMETROS INTERNOS ---
+# --- CONTROL DE ACCESO NATIVO Y PERSISTENTE ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Script inyectado para guardar y persistir la sesión directo en el teléfono
-cookie_js = """
-<script>
-    const emailGuardado = localStorage.getItem('ccr_email_v2');
-    if (emailGuardado && !window.location.href.includes('logged=')) {
-        const separator = window.location.href.includes('?') ? '&' : '?';
-        window.location.href = window.location.href + separator + 'logged=' + encodeURIComponent(emailGuardado);
-    }
-</script>
-"""
-st.html(cookie_js)
-
-# Leer parámetros silenciosos si se refresca la pantalla
+# Sincronización inmediata con parámetros de URL de Streamlit
 query_params = st.query_params
-if "logged" in query_params and not st.session_state.autenticado:
-    correo_recuperado = query_params["logged"].strip().lower()
+
+if "user" in query_params and not st.session_state.autenticado:
+    correo_url = query_params["user"].strip().lower()
     if not df.empty:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == correo_recuperado]
+        u = df[df.iloc[:, 0] == correo_url]
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
 
-# Procesamiento de Tokens de Seguridad
-if 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-    correo_base = st.session_state.ccr_email_input
-elif "logged" in query_params:
-    correo_base = query_params["logged"]
-elif st.session_state.datos is not None:
+# Determinación estable del ID del dispositivo
+if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0])
+elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
+    correo_base = st.session_state.ccr_email_input
 else:
     correo_base = "invitado"
 
@@ -157,15 +144,7 @@ if not st.session_state.autenticado:
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                
-                # Fijar permanentemente en el almacenamiento del celular
-                st.html(f"""
-                <script>
-                    localStorage.setItem('ccr_email_v2', '{email_input}');
-                    const separator = window.location.href.includes('?') ? '&' : '?';
-                    window.location.href = window.location.href + separator + 'logged={email_input}';
-                </script>
-                """)
+                st.query_params["user"] = email_input
                 st.rerun()
             else:
                 st.error("Correo no registrado.")
@@ -188,7 +167,6 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -205,7 +183,6 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
             
     else:
@@ -268,5 +245,4 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email_v2'); window.location.href = window.location.pathname;</script>""")
             st.rerun()
