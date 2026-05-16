@@ -71,7 +71,6 @@ st.markdown("""
         background-color: #161a24 !important;
         border-radius: 15px !important;
     }
-    /* Forzar visibilidad total de los textos internos en blanco */
     .stExpander label p, .stExpander summary p {
         color: white !important;
     }
@@ -104,12 +103,13 @@ def cargar_datos(gid):
 df = cargar_datos("0")
 df_a = cargar_datos("222722358")
 
-# --- CONTROL DE ACCESO FIJO Y PERSISTENTE ---
+# --- CONTROL DE ACCESO SILENCIOSO POR LOCALSTORAGE ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'dispositivo_id' not in st.session_state:
     st.session_state.dispositivo_id = None
 
+# Recibe el ID del navegador y el correo de forma interna usando canales de comunicación HTML5 rápidos
 device_js = """
 <script>
     let devId = localStorage.getItem('ccr_device_id');
@@ -117,38 +117,28 @@ device_js = """
         devId = 'CCR-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '-' + Date.now().toString().substr(-4);
         localStorage.setItem('ccr_device_id', devId);
     }
+    window.parent.postMessage({type: 'streamlit:setComponentValue', value: devId}, '*');
+    
+    // Auto-login si la sesión existe de forma local en el teléfono
     const email = localStorage.getItem('ccr_email');
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has('dev') || (email && !urlParams.has('login'))) {
-        let newSearch = '?dev=' + devId;
-        if (email) newSearch += '&login=' + encodeURIComponent(email);
-        parent.window.location.search = newSearch;
+    if (email) {
+        window.parent.postMessage({type: 'streamlit:setComponentValue', email_value: email}, '*');
     }
 </script>
 """
 st.html(device_js)
 
-query_params = st.query_params
-
-if "dev" in query_params:
-    st.session_state.dispositivo_id = query_params["dev"][0]
-elif st.session_state.dispositivo_id is None:
-    if 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-        hash_correo = hashlib.md5(st.session_state.ccr_email_input.encode()).hexdigest().upper()
-        st.session_state.dispositivo_id = f"CCR-{hash_correo[:5]}-LOCAL"
-    else:
-        st.session_state.dispositivo_id = "CCR-PENDIENTE-LOCAL"
-
-id_del_celular_actual = st.session_state.dispositivo_id
-
-if "login" in query_params and not st.session_state.autenticado:
-    email_guardado = query_params["login"].strip().lower()
-    if not df.empty:
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == email_guardado]
-        if not u.empty:
-            st.session_state.datos = u.iloc[0]
-            st.session_state.autenticado = True
+# Lógica de respaldo seguro si la conexión en la nube tarda en sincronizar el hardware
+if 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
+    hash_correo = hashlib.md5(st.session_state.ccr_email_input.encode()).hexdigest().upper()
+    id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
+elif not df.empty and st.session_state.autenticado:
+    u_tmp = st.session_state.datos
+    correo_actual = str(u_tmp.iloc[0]).strip().lower()
+    hash_correo = hashlib.md5(correo_actual.encode()).hexdigest().upper()
+    id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
+else:
+    id_del_celular_actual = "CCR-PROCESANDO-RED"
 
 st.title("🏠 Intranet CCR")
 
@@ -162,9 +152,6 @@ if not st.session_state.autenticado:
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                
-                hash_correo = hashlib.md5(email_input.encode()).hexdigest().upper()
-                st.session_state.dispositivo_id = f"CCR-{hash_correo[:5]}-LOCAL"
                 
                 st.html(f"""<script>localStorage.setItem('ccr_email', '{email_input}');</script>""")
                 st.rerun()
@@ -187,22 +174,14 @@ else:
         """, unsafe_allow_html=True)
         if st.button("Cerrar"):
             st.session_state.autenticado = False
-            st.session_state.dispositivo_id = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email'); parent.window.location.search = '';</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_email');</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
-        if id_del_celular_actual == "CCR-PENDIENTE-LOCAL":
-            correo_actual = str(u.iloc[0]).strip().lower()
-            hash_correo = hashlib.md5(correo_actual.encode()).hexdigest().upper()
-            id_del_celular_actual = f"CCR-{hash_correo[:5]}-LOCAL"
-            st.session_state.dispositivo_id = id_del_celular_actual
-
         st.markdown(f"""
             <div class="bloqueo-dispositivo">
                 <h2>🔒 Dispositivo No Vinculado</h2>
-                <p>Hola <b>{nombre}</b>, este dispositivo no está authorized para usar tu cuenta.</p>
+                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
                 <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
                 <div class="codigo-token">{id_del_celular_actual}</div>
                 <p>Una vez validado, podrás ingresar a la plataforma.</p>
@@ -210,9 +189,7 @@ else:
         """, unsafe_allow_html=True)
         if st.button("Salir"):
             st.session_state.autenticado = False
-            st.session_state.dispositivo_id = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email'); parent.window.location.search = '';</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_email');</script>""")
             st.rerun()
             
     else:
@@ -233,14 +210,14 @@ else:
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
                 <a href="#registro" target="_self" class="card card-normal">
                     <div class="icon">📝</div><p class="text-normal">VISITA</p></a>
-                <a href="https://wa.me/525619955000?text={msg_paq}" target="_blank" class="card card-normal">
+                <a href="https://wa.me/525527706348?text={msg_paq}" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
-        # --- SECCIÓN DE VISITAS TOTALMENTE VISIBLE ---
+        # --- SECCIÓN DE VISITAS ---
         st.markdown('<div id="registro"></div>', unsafe_allow_html=True)
         with st.expander("📝 Generar Pase QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
@@ -273,7 +250,6 @@ else:
 
         if st.button("Cerrar Sesión"):
             st.session_state.autenticado = False
-            st.session_state.dispositivo_id = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_email'); parent.window.location.search = '';</script>""")
+            js_clear = """<script>localStorage.removeItem('ccr_email');</script>"""
+            st.html(js_clear)
             st.rerun()
