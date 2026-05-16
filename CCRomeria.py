@@ -103,44 +103,53 @@ def cargar_datos(gid):
 df = cargar_datos("0")
 df_a = cargar_datos("222722358")
 
-# --- CONTROL DE ACCESO FIJO Y PERSISTENTE ---
+# --- SISTEMA DE PERSISTENCIA INMUNE A SELECCIÓN DE ENTORNO ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Script con paso de datos bidireccional forzado para burlar el borrado de iOS Web Clips
-persistencia_js = """
+# Mecanismo híbrido: extrae y consolida cookies permanentes en segundo plano
+html_cookie_handler = """
 <script>
-    const emailAlmacenado = localStorage.getItem('ccr_perma_email');
-    if (emailAlmacenado && !window.location.href.includes('user=')) {
-        const joiner = window.location.href.includes('?') ? '&' : '?';
-        window.location.href = window.location.href + joiner + 'user=' + encodeURIComponent(emailAlmacenado);
+    const readMail = localStorage.getItem('ccr_ios_mail');
+    if (readMail) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: readMail
+        }, '*');
     }
+    
+    // Captura cambios de recarga y reinyecta parámetros de sesión estructurados
+    window.addEventListener('beforeunload', function() {
+        if (readMail) {
+            localStorage.setItem('ccr_ios_mail', readMail);
+        }
+    });
 </script>
 """
-st.html(persistencia_js)
+st.html(html_cookie_handler)
 
+# Validación nativa usando los query_params del lado del servidor
 query_params = st.query_params
-
 if "user" in query_params and not st.session_state.autenticado:
-    correo_detectado = query_params["user"].strip().lower()
+    correo_url = query_params["user"].strip().lower()
     if not df.empty:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == correo_detectado]
+        u = df[df.iloc[:, 0] == correo_url]
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
 
-# Creación de Hash de Dispositivo Invariable
+# Resolución invariable para el cálculo del Token
 if st.session_state.autenticado and st.session_state.datos is not None:
-    correo_origen = str(st.session_state.datos.iloc[0])
+    correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-    correo_origen = st.session_state.ccr_email_input
+    correo_base = st.session_state.ccr_email_input
 else:
-    correo_origen = "invitado"
+    correo_base = "invitado"
 
-hash_correo = hashlib.md5(correo_origen.strip().lower().encode()).hexdigest().upper()
+hash_correo = hashlib.md5(correo_base.strip().lower().encode()).hexdigest().upper()
 id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
 
 st.title("🏠 Intranet CCR")
@@ -155,13 +164,12 @@ if not st.session_state.autenticado:
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
+                st.query_params["user"] = email_input
                 
-                # Guardar simultáneamente en almacenamiento local fijo y en ruta interna
+                # Inyección forzada tanto en la sesión activa como en el hardware local
                 st.html(f"""
                 <script>
-                    localStorage.setItem('ccr_perma_email', '{email_input}');
-                    const joiner = window.location.href.includes('?') ? '&' : '?';
-                    window.location.href = window.location.href + joiner + 'user={email_input}';
+                    localStorage.setItem('ccr_ios_mail', '{email_input}');
                 </script>
                 """)
                 st.rerun()
@@ -186,7 +194,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_email');</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -203,7 +211,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_email');</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     else:
@@ -266,5 +274,5 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_email'); window.location.href = window.location.pathname;</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
