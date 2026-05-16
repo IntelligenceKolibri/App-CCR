@@ -103,13 +103,13 @@ def cargar_datos(gid):
 df = cargar_datos("0")
 df_a = cargar_datos("222722358")
 
-# --- SISTEMA DE PERSISTENCIA INMUNE A SELECCIÓN DE ENTORNO ---
+# --- SISTEMA DE PERSISTENCIA Y AJUSTE DE TECLADO MOVIL ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Mecanismo híbrido: extrae y consolida cookies permanentes en segundo plano
+# Forzar por JavaScript que el input de texto no use mayúsculas ni autocorrección nativa en iOS/Android
 html_cookie_handler = """
 <script>
     const readMail = localStorage.getItem('ccr_ios_mail');
@@ -120,7 +120,19 @@ html_cookie_handler = """
         }, '*');
     }
     
-    // Captura cambios de recarga y reinyecta parámetros de sesión estructurados
+    // Buscar el input de correo y apagarle las mayúsculas del teclado móvil
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+
     window.addEventListener('beforeunload', function() {
         if (readMail) {
             localStorage.setItem('ccr_ios_mail', readMail);
@@ -166,7 +178,6 @@ if not st.session_state.autenticado:
                 st.session_state.autenticado = True
                 st.query_params["user"] = email_input
                 
-                # Inyección forzada tanto en la sesión activa como en el hardware local
                 st.html(f"""
                 <script>
                     localStorage.setItem('ccr_ios_mail', '{email_input}');
