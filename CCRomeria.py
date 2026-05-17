@@ -225,16 +225,11 @@ else:
         # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
-        # MENSAJE DE PÁNICO MODIFICADO EXACTAMENTE COMO LO SOLICITASTE
-        text_emergencia = f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA"
-        msg_aux = urllib.parse.quote(text_emergencia)
-        
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
-        msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
 
         st.markdown(f'''
             <div class="app-grid">
-                <a href="https://wa.me/525527706348?text={msg_aux}" target="_blank" class="card card-auxilio">
+                <a href="https://chat.whatsapp.com/HEedvXyLgY3FAMoozukgXw" target="_blank" class="card card-auxilio">
                     <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
                 <a href="tel:911" class="card card-normal">
                     <div class="icon">📞</div><p class="text-normal">911</p></a>
@@ -242,7 +237,7 @@ else:
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
                 <a href="#registro" target="_self" class="card card-normal">
                     <div class="icon">📝</div><p class="text-normal">VISITA</p></a>
-                <a href="https://wa.me/525527706348?text={msg_paq}" target="_blank" class="card card-normal">
+                <a href="https://chat.whatsapp.com/KIAgzzJl3Wm8ZeBLA3eSgx" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
