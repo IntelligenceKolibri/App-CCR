@@ -271,8 +271,8 @@ else:
                         mime="image/png"
                     )
 
-        # Avisos
-        if not df_a.empty:
+        # --- SECCIÓN DE AVISOS (Pestaña "222722358" de Google Sheets) ---
+        if not df_a.empty and len(df_a.columns) > 0:
             st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{df_a.iloc[0,0]}</div>', unsafe_allow_html=True)
 
         if st.button("Cerrar Sesión"):
