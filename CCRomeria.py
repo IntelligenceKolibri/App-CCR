@@ -109,7 +109,6 @@ if 'autenticado' not in st.session_state:
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Forzar por JavaScript que el input de texto no use mayúsculas ni autocorrección nativa en iOS/Android
 html_cookie_handler = """
 <script>
     const readMail = localStorage.getItem('ccr_ios_mail');
@@ -120,7 +119,6 @@ html_cookie_handler = """
         }, '*');
     }
     
-    // Buscar el input de correo y apagarle las mayúsculas del teclado móvil
     setInterval(() => {
         const inputs = window.parent.document.querySelectorAll('input[type="text"]');
         inputs.forEach(input => {
@@ -142,7 +140,6 @@ html_cookie_handler = """
 """
 st.html(html_cookie_handler)
 
-# Validación nativa usando los query_params del lado del servidor
 query_params = st.query_params
 if "user" in query_params and not st.session_state.autenticado:
     correo_url = query_params["user"].strip().lower()
@@ -153,7 +150,6 @@ if "user" in query_params and not st.session_state.autenticado:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
 
-# Resolución invariable para el cálculo del Token
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
@@ -229,7 +225,10 @@ else:
         # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
-        msg_aux = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre}, Casa {casa}")
+        # MENSAJE DE PÁNICO MODIFICADO EXACTAMENTE COMO LO SOLICITASTE
+        text_emergencia = f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA"
+        msg_aux = urllib.parse.quote(text_emergencia)
+        
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
 
