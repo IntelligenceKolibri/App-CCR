@@ -92,16 +92,20 @@ st.markdown("""
 # --- BASE DE DATOS ---
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
-def cargar_datos(gid):
+def cargar_datos(gid, tiene_header=True):
     try:
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
         r = requests.get(url, timeout=10)
-        return pd.read_csv(io.StringIO(r.text)).fillna("")
+        if tiene_header:
+            return pd.read_csv(io.StringIO(r.text)).fillna("")
+        else:
+            # Fuerza a leer la hoja sin procesar la primera fila como títulos de columna
+            return pd.read_csv(io.StringIO(r.text), header=None).fillna("")
     except:
         return pd.DataFrame()
 
-df = cargar_datos("0")
-df_a = cargar_datos("222722358")
+df = cargar_datos("0", tiene_header=True)
+df_a = cargar_datos("222722358", tiene_header=False) # Forzado sin header para capturar todo
 
 # --- SISTEMA DE PERSISTENCIA Y AJUSTE DE TECLADO MOVIL ---
 if 'autenticado' not in st.session_state:
@@ -208,7 +212,7 @@ else:
         st.markdown(f"""
             <div class="bloqueo-dispositivo">
                 <h2>🔒 Dispositivo No Vinculado</h2>
-                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
+                <p>Hola <b>{nombre}</b>, este dispositivo no está authorized para usar tu cuenta.</p>
                 <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
                 <div class="codigo-token">{id_del_celular_actual}</div>
                 <p>Una vez validado, podrás ingresar a la plataforma.</p>
@@ -271,7 +275,7 @@ else:
                         mime="image/png"
                     )
 
-        # --- SECCIÓN DE AVISOS (Validación reforzada contra celdas vacías) ---
+        # --- SECCIÓN DE AVISOS CORREGIDA ---
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
