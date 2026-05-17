@@ -271,9 +271,15 @@ else:
                         mime="image/png"
                     )
 
-        # --- SECCIÓN DE AVISOS (Pestaña "222722358" de Google Sheets) ---
+        # --- SECCIÓN DE AVISOS (Validación reforzada contra celdas vacías) ---
+        texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
-            st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{df_a.iloc[0,0]}</div>', unsafe_allow_html=True)
+            texto_aviso = str(df_a.iloc[0, 0]).strip()
+        
+        if not texto_aviso:
+            texto_aviso = "No hay avisos vigentes por el momento."
+            
+        st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{texto_aviso}</div>', unsafe_allow_html=True)
 
         if st.button("Cerrar Sesión"):
             st.session_state.autenticado = False
