@@ -27,6 +27,15 @@ st.markdown("""
         -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
     }
     
+    /* Título principal más grande */
+    .titulo-grande {
+        font-size: 42px !important;
+        font-weight: bold !important;
+        color: white !important;
+        margin-bottom: 5px !important;
+    }
+    
+    /* Grid de botones de la App */
     .app-grid {
         display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;
     }
@@ -36,11 +45,58 @@ st.markdown("""
         text-decoration: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         min-height: 140px; border: 1px solid rgba(255,255,255,0.1);
     }
-    .card-auxilio { background-color: #d32f2f !important; border: none !important; }
-    .text-auxilio { color: #ffffff !important; font-weight: bold; font-size: 15px; margin-top: 10px; }
+    .card-auxilio { 
+        background-color: #d32f2f !important; 
+        border: none !important; 
+        grid-column: span 2; 
+    }
+    .text-auxilio { color: #ffffff !important; font-weight: bold; font-size: 18px; margin-top: 10px; }
     .card-normal { background-color: #ffffff !important; }
     .text-normal { color: #000000 !important; font-weight: bold; font-size: 15px; margin-top: 10px; }
-    .icon { font-size: 30px; }
+    .icon { font-size: 35px; }
+    
+    /* REGRESADO A BLANCO LLAMATIVO (Estilo Card Blanca como los botones normales) */
+    .stExpander {
+        background-color: #ffffff !important;
+        border: none !important;
+        border-radius: 20px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        margin-top: 25px !important;
+        overflow: hidden !important;
+    }
+    .stExpander summary {
+        background-color: #ffffff !important;
+        padding: 15px 20px !important;
+    }
+    /* Estilo del texto del título del Expander en Negro y más grande */
+    .stExpander summary span p, .stExpander summary p {
+        color: #000000 !important;
+        font-weight: bold !important;
+        font-size: 18px !important;
+    }
+    /* Iconos y texto interno del contenedor */
+    [data-testid="stExpanderDetails"] {
+        padding: 20px !important;
+        background-color: #ffffff !important;
+    }
+    [data-testid="stExpanderDetails"] label p {
+        color: #000000 !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stExpanderDetails"] input {
+        background-color: #f0f2f6 !important;
+        color: #000000 !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        border-radius: 10px !important;
+    }
+    /* El texto del botón ahora se ve perfectamente en blanco sobre fondo oscuro */
+    [data-testid="stExpanderDetails"] button {
+        background-color: #262730 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 10px 20px !important;
+    }
     
     .aviso-pago {
         background-color: rgba(211, 47, 47, 0.2); border-radius: 15px; padding: 25px;
@@ -59,33 +115,6 @@ st.markdown("""
         background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; display: inline-block; margin: 15px 0;
     }
     h1, h3, p, span, label { color: white !important; }
-
-    /* ESTILO ORIGINAL OSCURO VINCULADO (image_28e31c.png) */
-    .stExpander {
-        background-color: #161a24 !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 15px !important;
-        margin-top: 20px !important;
-    }
-    .stExpander summary {
-        background-color: #161a24 !important;
-        border-radius: 15px !important;
-    }
-    .stExpander label p, .stExpander summary p {
-        color: white !important;
-    }
-    [data-testid="stExpanderDetails"] input {
-        background-color: #262730 !important;
-        color: white !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
-    }
-    [data-testid="stExpanderDetails"] button {
-        background-color: #262730 !important;
-        color: white !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        border-radius: 8px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -99,13 +128,12 @@ def cargar_datos(gid, tiene_header=True):
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
         else:
-            # Fuerza a leer la hoja sin procesar la primera fila como títulos de columna
             return pd.read_csv(io.StringIO(r.text), header=None).fillna("")
     except:
         return pd.DataFrame()
 
 df = cargar_datos("0", tiene_header=True)
-df_a = cargar_datos("222722358", tiene_header=False) # Forzado sin header para capturar todo
+df_a = cargar_datos("222722358", tiene_header=False)
 
 # --- SISTEMA DE PERSISTENCIA Y AJUSTE DE TECLADO MOVIL ---
 if 'autenticado' not in st.session_state:
@@ -164,7 +192,8 @@ else:
 hash_correo = hashlib.md5(correo_base.strip().lower().encode()).hexdigest().upper()
 id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
 
-st.title("🏠 Intranet CCR")
+# Renderizado del título ampliado
+st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
 if not st.session_state.autenticado:
     email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
@@ -212,7 +241,7 @@ else:
         st.markdown(f"""
             <div class="bloqueo-dispositivo">
                 <h2>🔒 Dispositivo No Vinculado</h2>
-                <p>Hola <b>{nombre}</b>, este dispositivo no está authorized para usar tu cuenta.</p>
+                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
                 <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
                 <div class="codigo-token">{id_del_celular_actual}</div>
                 <p>Una vez validado, podrás ingresar a la plataforma.</p>
@@ -231,6 +260,7 @@ else:
         
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
 
+        # Grid de botones superiores
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://chat.whatsapp.com/HEedvXyLgY3FAMoozukgXw" target="_blank" class="card card-auxilio">
@@ -239,8 +269,6 @@ else:
                     <div class="icon">📞</div><p class="text-normal">911</p></a>
                 <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
-                <a href="#registro" target="_self" class="card card-normal">
-                    <div class="icon">📝</div><p class="text-normal">VISITA</p></a>
                 <a href="https://chat.whatsapp.com/KIAgzzJl3Wm8ZeBLA3eSgx" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
@@ -248,20 +276,17 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
-        # --- SECCIÓN DE VISITAS ---
-        st.markdown('<div id="registro"></div>', unsafe_allow_html=True)
-        with st.expander("📝 Generar Pase QR"):
+        # --- SECCIÓN DE GENERACIÓN DE PASES QR (Regresado a Blanco e inputs claros) ---
+        with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
-            v_plat = st.text_input("Placas del vehículo (Opcional):", key="v_plat").upper()
-            v_tipo = st.text_input("Tipo/Modelo de vehículo (Opcional):", key="v_tipo")
+            v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
+            v_tipo = st.text_input("Tipo/Modelo de vehículo:", key="v_tipo")
             
             if st.button("Generar Pase QR", key="btn_gen_qr"):
-                if v_nom.strip() == "":
-                    st.warning("Por favor ingresa el nombre de la visita.")
+                if v_nom.strip() == "" or v_plat.strip() == "" or v_tipo.strip() == "":
+                    st.warning("Por favor ingresa todos los datos para generar el pase.")
                 else:
-                    datos_qr = f"AUTORIZA: {nombre} | CASA: {casa} | VISITA: {v_nom}"
-                    if v_plat: datos_qr += f" | PLACAS: {v_plat}"
-                    if v_tipo: datos_qr += f" | CARRO: {v_tipo}"
+                    datos_qr = f"AUTORIZA: {nombre} | CASA: {casa} | VISITA: {v_nom} | PLACAS: {v_plat} | CARRO: {v_tipo}"
                     
                     img = qrcode.make(datos_qr)
                     buf = BytesIO()
@@ -275,7 +300,7 @@ else:
                         mime="image/png"
                     )
 
-        # --- SECCIÓN DE AVISOS CORREGIDA ---
+        # --- SECCIÓN DE AVISOS ---
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
