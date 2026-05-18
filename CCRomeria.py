@@ -10,6 +10,9 @@ from io import BytesIO
 # Configuración de página y limpieza total de la interfaz de Streamlit
 st.set_page_config(page_title="Intranet CCR", page_icon="🏠", layout="centered")
 
+# --- NÚMERO DE SEGURIDAD (WHATSAPP DE CONTROL) ---
+TELEFONO_CONTROL = "524461292988"
+
 # CSS Estricto para recuperar tu diseño exacto y ocultar marcas de desarrollo
 st.markdown("""
 <style>
@@ -55,7 +58,7 @@ st.markdown("""
     .text-normal { color: #000000 !important; font-weight: bold; font-size: 15px; margin-top: 10px; }
     .icon { font-size: 35px; }
     
-    /* REGRESADO A BLANCO LLAMATIVO (Estilo Card Blanca como los botones normales) */
+    /* DISEÑO LLAMATIVO PARA EL EXPANDER (Estilo Card Blanca como los botones normales) */
     .stExpander {
         background-color: #ffffff !important;
         border: none !important;
@@ -68,13 +71,11 @@ st.markdown("""
         background-color: #ffffff !important;
         padding: 15px 20px !important;
     }
-    /* Estilo del texto del título del Expander en Negro y más grande */
     .stExpander summary span p, .stExpander summary p {
         color: #000000 !important;
         font-weight: bold !important;
         font-size: 18px !important;
     }
-    /* Iconos y texto interno del contenedor */
     [data-testid="stExpanderDetails"] {
         padding: 20px !important;
         background-color: #ffffff !important;
@@ -89,7 +90,6 @@ st.markdown("""
         border: 1px solid rgba(0,0,0,0.1) !important;
         border-radius: 10px !important;
     }
-    /* El texto del botón ahora se ve perfectamente en blanco sobre fondo oscuro */
     [data-testid="stExpanderDetails"] button {
         background-color: #262730 !important;
         color: white !important;
@@ -258,25 +258,28 @@ else:
         # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
+        # MENSAJES ORIGINALES RESTAURADOS
+        msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
+        msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
 
-        # Grid de botones superiores
+        # Grid de botones con los textos corregidos hacia el nuevo número
         st.markdown(f'''
             <div class="app-grid">
-                <a href="https://chat.whatsapp.com/HEedvXyLgY3FAMoozukgXw" target="_blank" class="card card-auxilio">
+                <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
                     <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
                 <a href="tel:911" class="card card-normal">
                     <div class="icon">📞</div><p class="text-normal">911</p></a>
                 <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
-                <a href="https://chat.whatsapp.com/KIAgzzJl3Wm8ZeBLA3eSgx" target="_blank" class="card card-normal">
+                <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_paq}" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
-        # --- SECCIÓN DE GENERACIÓN DE PASES QR (Regresado a Blanco e inputs claros) ---
+        # --- SECCIÓN DE GENERACIÓN DE PASES QR ---
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
             v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
