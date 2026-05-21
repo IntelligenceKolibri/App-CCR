@@ -135,7 +135,7 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- SISTEMA DE PERSISTENCIA Y AJUSTE DE TECLADO MOVIL ---
+# --- SISTEMA DE PERSISTENCIA Y SOLUCIÓN DE RECONEXIÓN AUTOMÁTICA ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
@@ -168,6 +168,29 @@ html_cookie_handler = """
             localStorage.setItem('ccr_ios_mail', readMail);
         }
     });
+
+    // Detecta cuando el usuario regresa a la pestaña (bloqueo de cel o cambiar de app)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+
+    // Fuerza recarga si el WebSocket se queda intentando conectar más de 2 segundos
+    let checkConnection = setInterval(() => {
+        const statusWidget = window.parent.document.querySelector('[data-testid="stStatusWidget"]');
+        if (statusWidget && statusWidget.innerText.toLowerCase().includes('connecting')) {
+            setTimeout(() => {
+                window.parent.location.reload();
+            }, 2000);
+        }
+    }, 3000);
 </script>
 """
 st.html(html_cookie_handler)
