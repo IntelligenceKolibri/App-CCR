@@ -133,16 +133,13 @@ def cargar_datos(gid, tiene_header=True):
     except:
         return pd.DataFrame()
 
-df = cargar_datos("0", tiene_header=True)
-df_a = cargar_datos("222722358", tiene_header=False)
-
-# --- MANEJADOR DE PERSISTENCIA NATIVA (SIN LIBRERÍAS EXTERNAS) ---
+# --- MANEJADOR DE PERSISTENCIA NATIVA ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Componente invisible para recuperar de forma síncrona el LocalStorage del teléfono
+# Componente invisible para recuperar el LocalStorage del teléfono
 html_bridge = """
 <script>
     window.addEventListener('DOMContentLoaded', (event) => {
@@ -171,13 +168,15 @@ if "user" in query_params:
 elif correo_guardado and correo_guardado != "no_vacio":
     correo_a_validar = str(correo_guardado).strip().lower()
 
-# Autologin si el correo es válido
-if correo_a_validar and not st.session_state.autenticado and not df.empty:
-    df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-    u = df[df.iloc[:, 0] == correo_a_validar]
-    if not u.empty:
-        st.session_state.datos = u.iloc[0]
-        st.session_state.autenticado = True
+# Autologin con descarga en tiempo real para evitar registros fantasmas
+if correo_a_validar and not st.session_state.autenticado:
+    df = cargar_datos("0", tiene_header=True)
+    if not df.empty:
+        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
+        u = df[df.iloc[:, 0] == correo_a_validar]
+        if not u.empty:
+            st.session_state.datos = u.iloc[0]
+            st.session_state.autenticado = True
 
 # --- GENERACIÓN DEL HASH DE DISPOSITIVO ---
 if st.session_state.autenticado and st.session_state.datos is not None:
@@ -196,6 +195,8 @@ st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_h
 if not st.session_state.autenticado:
     email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
     if st.button("Entrar"):
+        # Forzar descarga inmediata al dar clic en Entrar
+        df = cargar_datos("0", tiene_header=True)
         if not df.empty:
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
             u = df[df.iloc[:, 0] == email_input]
@@ -205,7 +206,6 @@ if not st.session_state.autenticado:
                 st.session_state.autenticado = True
                 st.query_params["user"] = email_input
                 
-                # Inyección directa para guardar la sesión antes del refresco
                 st.html(f"""
                 <script>
                     localStorage.setItem('ccr_mail_persistencia', '{email_input}');
@@ -214,7 +214,7 @@ if not st.session_state.autenticado:
                 """)
                 st.rerun()
             else:
-                st.error("Correo no registrado.")
+                st.error("Correo no registrado o en proceso de sincronización. Verifica en tu Google Sheets.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
@@ -300,6 +300,8 @@ else:
                         mime="image/png"
                     )
 
+        # --- SECCIÓN DE AVISOS (SE CARGA AL MOMENTO) ---
+        df_a = cargar_datos("222722358", tiene_header=False)
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
@@ -316,7 +318,7 @@ else:
             st.html("""<script>localStorage.removeItem('ccr_mail_persistencia'); window.parent.location.reload();</script>""")
             st.rerun()
 
-# --- MONITOREO DE EVENTOS Y AUTO-RECONEXIÓN POR PANTALLA BLANCA ---
+# --- MONITOREO DE EVENTOS Y AUTO-RECONEXIÓN ---
 st.html("""
 <script>
     setInterval(() => {
