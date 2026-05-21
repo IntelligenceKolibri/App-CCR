@@ -5,6 +5,7 @@ import requests
 import io
 import qrcode
 import hashlib
+import time
 import streamlit.components.v1 as components
 from io import BytesIO
 
@@ -124,7 +125,9 @@ sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+        # Añadimos un número aleatorio basado en el tiempo para romper la caché de Google
+        romper_cache = int(time.time())
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache_bust={romper_cache}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -168,7 +171,7 @@ if "user" in query_params:
 elif correo_guardado and correo_guardado != "no_vacio":
     correo_a_validar = str(correo_guardado).strip().lower()
 
-# Autologin con descarga en tiempo real para evitar registros fantasmas
+# Autologin con descarga forzada en tiempo real
 if correo_a_validar and not st.session_state.autenticado:
     df = cargar_datos("0", tiene_header=True)
     if not df.empty:
@@ -195,7 +198,6 @@ st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_h
 if not st.session_state.autenticado:
     email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
     if st.button("Entrar"):
-        # Forzar descarga inmediata al dar clic en Entrar
         df = cargar_datos("0", tiene_header=True)
         if not df.empty:
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
@@ -214,7 +216,8 @@ if not st.session_state.autenticado:
                 """)
                 st.rerun()
             else:
-                st.error("Correo no registrado o en proceso de sincronización. Verifica en tu Google Sheets.")
+                # MENSAJE MODIFICADO: Limpio y ocultando la infraestructura técnica
+                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
@@ -300,7 +303,7 @@ else:
                         mime="image/png"
                     )
 
-        # --- SECCIÓN DE AVISOS (SE CARGA AL MOMENTO) ---
+        # --- SECCIÓN DE AVISOS (CON ANTI-CACHÉ) ---
         df_a = cargar_datos("222722358", tiene_header=False)
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
