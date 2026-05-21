@@ -48,9 +48,10 @@ st.markdown("""
 
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
+# API gviz/tq para forzar a Google a romper la caché y darnos datos en tiempo real al segundo
 def cargar_datos(gid, tiene_header=True):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -67,59 +68,18 @@ if 'autenticado' not in st.session_state:
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-html_cookie_handler = """
-<script>
-    const readMail = localStorage.getItem('ccr_ios_mail');
-    if (readMail) {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: readMail
-        }, '*');
-    }
-    
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        inputs.forEach(input => {
-            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'email');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    window.addEventListener('beforeunload', function() {
-        if (readMail) {
-            localStorage.setItem('ccr_ios_mail', readMail);
-        }
-    });
-</script>
-"""
-st.html(html_cookie_handler)
-
-query_params = st.query_params
-if "user" in query_params and not st.session_state.autenticado:
-    correo_url = query_params["user"].strip().lower()
-    if not df.empty:
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == correo_url]
-        if not u.empty:
-            st.session_state.datos = u.iloc[0]
-            st.session_state.autenticado = True
-
-if st.session_state.autenticado and st.session_state.datos is not None:
-    correo_base = str(st.session_state.datos.iloc[0])
-elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-    correo_base = st.session_state.ccr_email_input
-else:
-    correo_base = "invitado"
-
-hash_correo = hashlib.md5(correo_base.strip().lower().encode()).hexdigest().upper()
-id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
+# --- GENERADOR DE ID DE DISPOSITIVO REAL (Navegador + Pantalla) ---
+headers = st.context.headers
+user_agent = headers.get("User-Agent", "Desconocido")
+accept_language = headers.get("Accept-Language", "es")
+# Combinamos las huellas digitales del navegador para crear el hash único
+huella_digital = f"{user_agent}-{accept_language}"
+hash_dispositivo = hashlib.md5(huella_digital.encode()).hexdigest().upper()
+id_del_celular_actual = f"CCR-{hash_dispositivo[:5]}-DISP"
 
 st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
+# --- LOGIN ---
 if not st.session_state.autenticado:
     email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
     if st.button("Entrar"):
@@ -130,23 +90,18 @@ if not st.session_state.autenticado:
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                st.query_params["user"] = email_input
-                st.html(f"<script>localStorage.setItem('ccr_ios_mail', '{email_input}');</script>")
                 st.rerun()
             else:
-                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
+                st.error("El correo ingresado no se encuentra registrado.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
-    
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
     
-    # --- BLOQUEO ULTRA ESTRICTO ---
-    # Comprobamos el texto tal cual viene en la columna 8 (índice 7)
+    # --- FILTRO DE CONTROL ULTRA ESTRICTO DISPOSITIVO REAL ---
     contenido_celda_dispositivo = str(u.iloc[7]).strip()
     ids_autorizados = [i.strip() for i in contenido_celda_dispositivo.split(",") if i.strip()]
     
-    # Si la celda en Sheets está vacía, tiene un guión o no contiene EXACTAMENTE tu token actual, se le niega el acceso
     if not ids_autorizados or contenido_celda_dispositivo in ["", "-", "PENDIENTE"]:
         dispositivo_valido = False
     else:
@@ -162,8 +117,6 @@ else:
         if st.button("Cerrar"):
             st.session_state.autenticado = False
             st.session_state.datos = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -179,11 +132,10 @@ else:
         if st.button("Salir"):
             st.session_state.autenticado = False
             st.session_state.datos = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     else:
+        # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
         msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
@@ -219,7 +171,7 @@ else:
                     buf = BytesIO()
                     img.save(buf)
                     st.image(buf)
-                    st.download_button(label="📥 Descargar pase para enviar por WhatsApp", data=buf.getvalue(), file_name=f"Pase_{v_nom.replace(' ', '_')}.png", mime="image/png")
+                    st.download_button(label="📥 Descargar pase", data=buf.getvalue(), file_name=f"Pase_{v_nom.replace(' ', '_')}.png", mime="image/png")
 
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
@@ -231,6 +183,21 @@ else:
         if st.button("Cerrar Sesión"):
             st.session_state.autenticado = False
             st.session_state.datos = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
+
+# Forzador de configuración estricta para teclados móviles
+st.html("""
+<script>
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+</script>
+""")
