@@ -125,7 +125,6 @@ sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        # Añadimos un número aleatorio basado en el tiempo para romper la caché de Google
         romper_cache = int(time.time())
         url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache_bust={romper_cache}"
         r = requests.get(url, timeout=10)
@@ -142,7 +141,7 @@ if 'autenticado' not in st.session_state:
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Componente invisible para recuperar el LocalStorage del teléfono
+# Componente síncrono para recuperar el correo del almacenamiento local
 html_bridge = """
 <script>
     window.addEventListener('DOMContentLoaded', (event) => {
@@ -171,12 +170,13 @@ if "user" in query_params:
 elif correo_guardado and correo_guardado != "no_vacio":
     correo_a_validar = str(correo_guardado).strip().lower()
 
-# Autologin con descarga forzada en tiempo real
+# Autologin con limpieza estricta de cadenas de texto
 if correo_a_validar and not st.session_state.autenticado:
     df = cargar_datos("0", tiene_header=True)
     if not df.empty:
+        # Limpieza absoluta de la columna de correos de la base de datos
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == correo_a_validar]
+        u = df[df.iloc[:, 0] == correo_a_validar.strip()]
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
@@ -200,23 +200,23 @@ if not st.session_state.autenticado:
     if st.button("Entrar"):
         df = cargar_datos("0", tiene_header=True)
         if not df.empty:
+            # Limpieza estricta al dar clic manual en el botón
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-            u = df[df.iloc[:, 0] == email_input]
+            u = df[df.iloc[:, 0] == email_input.strip()]
             
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                st.query_params["user"] = email_input
+                st.query_params["user"] = email_input.strip()
                 
                 st.html(f"""
                 <script>
-                    localStorage.setItem('ccr_mail_persistencia', '{email_input}');
+                    localStorage.setItem('ccr_mail_persistencia', '{email_input.strip()}');
                     window.parent.location.reload();
                 </script>
                 """)
                 st.rerun()
             else:
-                # MENSAJE MODIFICADO: Limpio y ocultando la infraestructura técnica
                 st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
 else:
     u = st.session_state.datos
@@ -303,7 +303,7 @@ else:
                         mime="image/png"
                     )
 
-        # --- SECCIÓN DE AVISOS (CON ANTI-CACHÉ) ---
+        # --- SECCIÓN DE AVISOS ---
         df_a = cargar_datos("222722358", tiene_header=False)
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
