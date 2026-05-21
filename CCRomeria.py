@@ -214,7 +214,7 @@ if not st.session_state.autenticado:
                 """)
                 st.rerun()
             else:
-                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
+                st.error("Correo no registrado.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
