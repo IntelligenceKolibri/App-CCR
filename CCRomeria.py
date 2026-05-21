@@ -114,13 +114,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS (CONEXIÓN EN VIVO CORREGIDA) ---
+# --- BASE DE DATOS ---
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        # Endpoint directo a la API de visualización para forzar la actualización al segundo
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -132,16 +131,45 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- SISTEMA DE PERSISTENCIA Y CONTROL DE SESIÓN ---
+# --- SISTEMA DE PERSISTENCIA Y AJUSTE DE TECLADO MOVIL ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-query_params = st.query_params
+html_cookie_handler = """
+<script>
+    const readMail = localStorage.getItem('ccr_ios_mail');
+    if (readMail) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: readMail
+        }, '*');
+    }
+    
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
 
-# Si el correo viene en la URL, se verifica contra el DataFrame fresco antes de dar acceso
-if "user" in query_params:
+    window.addEventListener('beforeunload', function() {
+        if (readMail) {
+            localStorage.setItem('ccr_ios_mail', readMail);
+        }
+    });
+</script>
+"""
+st.html(html_cookie_handler)
+
+query_params = st.query_params
+if "user" in query_params and not st.session_state.autenticado:
     correo_url = query_params["user"].strip().lower()
     if not df.empty:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
@@ -149,9 +177,6 @@ if "user" in query_params:
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
-        else:
-            st.session_state.autenticado = False
-            st.session_state.datos = None
 
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0])
@@ -163,6 +188,7 @@ else:
 hash_correo = hashlib.md5(correo_base.strip().lower().encode()).hexdigest().upper()
 id_del_celular_actual = f"CCR-{hash_correo[:5]}-DISP"
 
+# Renderizado del título ampliado
 st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
 if not st.session_state.autenticado:
@@ -176,6 +202,12 @@ if not st.session_state.autenticado:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
                 st.query_params["user"] = email_input
+                
+                st.html(f"""
+                <script>
+                    localStorage.setItem('ccr_ios_mail', '{email_input}');
+                </script>
+                """)
                 st.rerun()
             else:
                 st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
@@ -184,10 +216,16 @@ else:
     nombre, casa = u.iloc[1], u.iloc[2]
     
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
-    ids_autorizados = [i.strip() for i in str(u.iloc[7]).split(",") if i.strip()]
     
-    # CONTROL DE SEGURIDAD ESTRICTO: Bloquea si la celda está vacía o si el ID actual no coincide
-    dispositivo_valido = id_del_celular_actual in ids_autorizados if ids_autorizados else False
+    # --- FILTRO DE CONTROL ULTRA ESTRICTO ---
+    celda_dispositivo = str(u.iloc[7]).strip()
+    ids_autorizados = [i.strip() for i in celda_dispositivo.split(",") if i.strip()]
+    
+    # Si la celda en Sheets está vacía, tiene guiones o no tiene un token válido, se bloquea por defecto
+    if not celda_dispositivo or celda_dispositivo in ["", "-", "PENDIENTE"]:
+        dispositivo_valido = False
+    else:
+        dispositivo_valido = id_del_celular_actual in ids_autorizados
 
     if not esta_pagado:
         st.markdown(f"""
@@ -200,6 +238,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -216,10 +255,11 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
             
     else:
-        # --- ACCESO AUTORIZADO Y TOTALMENTE BLINDADO ---
+        # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
         msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
@@ -277,33 +317,5 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
             st.rerun()
-
-# --- FORMATEADOR DE TECLADOS Y MANEJADOR DE PANTALLA EN BLANCO ---
-st.html("""
-<script>
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        inputs.forEach(input => {
-            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'email');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
-                                 window.parent.document.body.innerText.includes('is sleeping');
-            
-            if (appCrashed || overlayError) {
-                window.parent.location.reload();
-            }
-        }
-    });
-</script>
-""")
