@@ -5,7 +5,6 @@ import requests
 import io
 import qrcode
 import hashlib
-import time
 from io import BytesIO
 
 # Configuración de página y limpieza total de la interfaz de Streamlit
@@ -115,14 +114,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS CON ANTI-CACHÉ FORZADO ---
+# --- BASE DE DATOS (CONSULTA DIRECTA EN VIVO) ---
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        # El cache_bust con el timestamp obliga a Google a dar los datos reales de este segundo
-        romper_cache = int(time.time())
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache_bust={romper_cache}"
+        # Reemplazo de endpoint tradicional por el de Google Visualization API para romper la caché de forma nativa
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -131,11 +129,11 @@ def cargar_datos(gid, tiene_header=True):
     except:
         return pd.DataFrame()
 
-# Carga limpia e inmediata en cada ejecución
+# Carga limpia y forzada al momento exacto de la ejecución
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- SISTEMA DE PERSISTENCIA Y CONTROL DE SESIÓN ---
+# --- SISTEMA DE PERSISTENCIA BASADO EN URL ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
@@ -143,7 +141,6 @@ if 'datos' not in st.session_state:
 
 query_params = st.query_params
 
-# Si la URL mantiene el parámetro del usuario, no pide login y lee directo del DF fresco
 if "user" in query_params:
     correo_url = query_params["user"].strip().lower()
     if not df.empty:
@@ -153,7 +150,6 @@ if "user" in query_params:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
         else:
-            # Si el correo se borró de la hoja, limpia la sesión
             st.session_state.autenticado = False
             st.session_state.datos = None
 
@@ -280,7 +276,7 @@ else:
             st.query_params.clear()
             st.rerun()
 
-# --- RECONEXIÓN INVISIBLE Y LIMPIEZA DE TECLADO ---
+# --- RECONEXIÓN ACTIVA POR INACTIVIDAD ---
 st.html("""
 <script>
     setInterval(() => {
@@ -295,7 +291,6 @@ st.html("""
         });
     }, 1000);
 
-    // Monitorea si la app se duerme (Connection timeout) al bloquear el teléfono para revivirla limpio
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
