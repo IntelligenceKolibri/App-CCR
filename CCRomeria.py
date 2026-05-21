@@ -6,7 +6,6 @@ import io
 import qrcode
 import hashlib
 from io import BytesIO
-from streamlit_local_storage import StLocalStorage
 
 # Configuración de página y limpieza total de la interfaz de Streamlit
 st.set_page_config(page_title="Intranet CCR", page_icon="🏠", layout="centered")
@@ -59,7 +58,7 @@ st.markdown("""
     .text-normal { color: #000000 !important; font-weight: bold; font-size: 15px; margin-top: 10px; }
     .icon { font-size: 35px; }
     
-    /* DISEÑO LLAMATIVO PARA EL EXPANDER */
+    /* DISEÑO LLAMATIVO PARA EL EXPANDER (Estilo Card Blanca como los botones normales) */
     .stExpander {
         background-color: #ffffff !important;
         border: none !important;
@@ -136,26 +135,34 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- PERSISTENCIA NATIVA CON LOCAL STORAGE ---
-storage = StLocalStorage()
-
+# --- PERSISTENCIA AVANZADA EN SESIÓN ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Intentar recuperar el correo del almacenamiento seguro local del dispositivo
-correo_guardado = storage.get("ccr_mail_persistencia")
+# Recibir correo persistido desde la inyección de JavaScript
+correo_localstorage = st.html("""
+<script>
+    const savedMail = localStorage.getItem('ccr_ios_mail');
+    if (savedMail) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: savedMail
+        }, '*');
+    }
+</script>
+""")
 
+# --- PROCESAR LOGIN AUTOMÁTICO VÍA URL O LOCALSTORAGE ---
 query_params = st.query_params
 correo_a_validar = None
 
 if "user" in query_params:
     correo_a_validar = query_params["user"].strip().lower()
-elif correo_guardado:
-    correo_a_validar = str(correo_guardado).strip().lower()
+elif correo_localstorage:
+    correo_a_validar = str(correo_localstorage).strip().lower()
 
-# Autologin si se encuentra el correo guardado en el teléfono
 if correo_a_validar and not st.session_state.autenticado and not df.empty:
     df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
     u = df[df.iloc[:, 0] == correo_a_validar]
@@ -163,7 +170,7 @@ if correo_a_validar and not st.session_state.autenticado and not df.empty:
         st.session_state.datos = u.iloc[0]
         st.session_state.autenticado = True
 
-# --- GENERACIÓN DEL HASH DE DISPOSITIVO ---
+# --- CONFIGURACIÓN DE IDENTIFICADOR ÚNICO ---
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
@@ -189,8 +196,12 @@ if not st.session_state.autenticado:
                 st.session_state.autenticado = True
                 st.query_params["user"] = email_input
                 
-                # Guarda el correo directamente en el dispositivo antes de recargar
-                storage.set("ccr_mail_persistencia", email_input)
+                st.html(f"""
+                <script>
+                    localStorage.setItem('ccr_ios_mail', '{email_input}');
+                    window.parent.location.reload();
+                </script>
+                """)
                 st.rerun()
             else:
                 st.error("Correo no registrado.")
@@ -213,7 +224,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            storage.delete("ccr_mail_persistencia")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -230,7 +241,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            storage.delete("ccr_mail_persistencia")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     else:
@@ -242,6 +253,7 @@ else:
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
 
+        # Grid de botones con los textos corregidos hacia el nuevo número
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
@@ -295,10 +307,10 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            storage.delete("ccr_mail_persistencia")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
 
-# --- FORMATEO AUTOMÁTICO DE ENTRADAS Y MONITOREO DE CAÍDAS ---
+# --- MANEJADOR DE EVENTOS DE INTERFAZ Y RECONEXIÓN DINÁMICA ---
 st.html("""
 <script>
     setInterval(() => {
@@ -313,7 +325,7 @@ st.html("""
         });
     }, 1000);
 
-    // Forzar autorecarga limpia si se pierde la conexión tras bloquear el celular
+    // Si la pestaña pasa a segundo plano y se desconecta, recarga limpio al volver
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
@@ -326,6 +338,7 @@ st.html("""
         }
     });
 
+    // Monitoreo del estado del WebSocket
     let checkConnection = setInterval(() => {
         const statusWidget = window.parent.document.querySelector('[data-testid="stStatusWidget"]');
         if (statusWidget && statusWidget.innerText.toLowerCase().includes('connecting')) {
