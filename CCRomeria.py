@@ -135,76 +135,42 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- SISTEMA DE PERSISTENCIA Y SOLUCIÓN DE RECONEXIÓN AUTOMÁTICA ---
+# --- PERSISTENCIA AVANZADA EN SESIÓN ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-html_cookie_handler = """
+# Recibir correo persistido desde la inyección de JavaScript
+correo_localstorage = st.html("""
 <script>
-    const readMail = localStorage.getItem('ccr_ios_mail');
-    if (readMail) {
+    const savedMail = localStorage.getItem('ccr_ios_mail');
+    if (savedMail) {
         window.parent.postMessage({
             type: 'streamlit:setComponentValue',
-            value: readMail
+            value: savedMail
         }, '*');
     }
-    
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        inputs.forEach(input => {
-            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'email');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    window.addEventListener('beforeunload', function() {
-        if (readMail) {
-            localStorage.setItem('ccr_ios_mail', readMail);
-        }
-    });
-
-    // Detecta cuando el usuario regresa a la pestaña (bloqueo de cel o cambiar de app)
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
-                                 window.parent.document.body.innerText.includes('is sleeping');
-            
-            if (appCrashed || overlayError) {
-                window.parent.location.reload();
-            }
-        }
-    });
-
-    // Fuerza recarga si el WebSocket se queda intentando conectar más de 2 segundos
-    let checkConnection = setInterval(() => {
-        const statusWidget = window.parent.document.querySelector('[data-testid="stStatusWidget"]');
-        if (statusWidget && statusWidget.innerText.toLowerCase().includes('connecting')) {
-            setTimeout(() => {
-                window.parent.location.reload();
-            }, 2000);
-        }
-    }, 3000);
 </script>
-"""
-st.html(html_cookie_handler)
+""")
 
+# --- PROCESAR LOGIN AUTOMÁTICO VÍA URL O LOCALSTORAGE ---
 query_params = st.query_params
-if "user" in query_params and not st.session_state.autenticado:
-    correo_url = query_params["user"].strip().lower()
-    if not df.empty:
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        u = df[df.iloc[:, 0] == correo_url]
-        if not u.empty:
-            st.session_state.datos = u.iloc[0]
-            st.session_state.autenticado = True
+correo_a_validar = None
 
+if "user" in query_params:
+    correo_a_validar = query_params["user"].strip().lower()
+elif correo_localstorage:
+    correo_a_validar = str(correo_localstorage).strip().lower()
+
+if correo_a_validar and not st.session_state.autenticado and not df.empty:
+    df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
+    u = df[df.iloc[:, 0] == correo_a_validar]
+    if not u.empty:
+        st.session_state.datos = u.iloc[0]
+        st.session_state.autenticado = True
+
+# --- CONFIGURACIÓN DE IDENTIFICADOR ÚNICO ---
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
@@ -233,6 +199,7 @@ if not st.session_state.autenticado:
                 st.html(f"""
                 <script>
                     localStorage.setItem('ccr_ios_mail', '{email_input}');
+                    window.parent.location.reload();
                 </script>
                 """)
                 st.rerun()
@@ -257,7 +224,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -274,7 +241,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     else:
@@ -340,5 +307,45 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail');</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
+
+# --- MANEJADOR DE EVENTOS DE INTERFAZ Y RECONEXIÓN DINÁMICA ---
+st.html("""
+<script>
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+
+    // Si la pestaña pasa a segundo plano y se desconecta, recarga limpio al volver
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+
+    // Monitoreo del estado del WebSocket
+    let checkConnection = setInterval(() => {
+        const statusWidget = window.parent.document.querySelector('[data-testid="stStatusWidget"]');
+        if (statusWidget && statusWidget.innerText.toLowerCase().includes('connecting')) {
+            setTimeout(() => {
+                window.parent.location.reload();
+            }, 2000);
+        }
+    }, 3000);
+</script>
+""")
