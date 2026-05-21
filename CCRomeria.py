@@ -131,7 +131,7 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- CONTROL DE PERSISTENCIA POR URL (EVITA QUE TE SAQUE AL REFRESCAR) ---
+# --- CONTROL DE PERSISTENCIA Y SESIÓN PERMANENTE ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
@@ -139,7 +139,7 @@ if 'datos' not in st.session_state:
 
 query_params = st.query_params
 
-# Si existe el parámetro "user" en la URL, se mantiene la sesión síncronamente al actualizar
+# Si existe el parámetro "user" en la URL, se mantiene la sesión síncronamente
 if "user" in query_params:
     correo_url = query_params["user"].strip().lower()
     if not df.empty:
@@ -172,8 +172,14 @@ if not st.session_state.autenticado:
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                # Fijamos el usuario en la URL inmediatamente para aguantar los refrescos
                 st.query_params["user"] = email_input
+                # Guarda en el disco duro del navegador para persistir cuando se cierre la pestaña por completo
+                st.html(f"""
+                <script>
+                    localStorage.setItem('ccr_perma_user', '{email_input}');
+                    window.parent.location.reload();
+                </script>
+                """)
                 st.rerun()
             else:
                 st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
@@ -203,6 +209,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -219,6 +226,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
             st.rerun()
             
     else:
@@ -280,11 +288,20 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
+            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
             st.rerun()
 
-# --- AUTO-REFRESCO PARA EVITAR QUE SE DUERMA LA APP Y AJUSTES DE TECLADO ---
+# --- RECUPERADOR DE DISCO DURO, FORMATEADOR Y ANTI-DORMIDO ---
 st.html("""
 <script>
+    // Recuperación síncrona si la URL viene limpia tras cerrar la pestaña
+    const savedUser = localStorage.getItem('ccr_perma_user');
+    const currentUrl = new URL(window.parent.location.href);
+    if (savedUser && !currentUrl.searchParams.has('user')) {
+        currentUrl.searchParams.set('user', savedUser);
+        window.parent.location.href = currentUrl.toString();
+    }
+
     setInterval(() => {
         const inputs = window.parent.document.querySelectorAll('input[type="text"]');
         inputs.forEach(input => {
@@ -297,7 +314,6 @@ st.html("""
         });
     }, 1000);
 
-    // Si bloqueas el cel o pasa a segundo plano, si el servidor de Streamlit se durmió, recarga al instante de forma limpia
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
