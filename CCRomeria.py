@@ -5,6 +5,7 @@ import requests
 import io
 import qrcode
 import hashlib
+import time
 from io import BytesIO
 
 # Configuración de página y limpieza total de la interfaz de Streamlit
@@ -114,12 +115,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS ---
+# --- BASE DE DATOS CON ANTI-CACHÉ FORZADO ---
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+        # El cache_bust con el timestamp obliga a Google a dar los datos reales de este segundo
+        romper_cache = int(time.time())
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}&cache_bust={romper_cache}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -128,55 +131,20 @@ def cargar_datos(gid, tiene_header=True):
     except:
         return pd.DataFrame()
 
-# Carga de datos directa (Garantiza tiempo real al refrescar o interactuar)
+# Carga limpia e inmediata en cada ejecución
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- MANEJADOR DE PERSISTENCIA Y RECONEXIÓN ACTIVA ---
+# --- SISTEMA DE PERSISTENCIA Y CONTROL DE SESIÓN ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-# Script inyectado para evitar el cierre de sesión, ajustar teclado iOS y auto-despertar la app
-st.html("""
-<script>
-    const readMail = localStorage.getItem('ccr_ios_mail');
-    if (readMail) {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: readMail
-        }, '*');
-    }
-    
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        inputs.forEach(input => {
-            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'email');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
-                                 window.parent.document.body.innerText.includes('is sleeping');
-            
-            if (appCrashed || overlayError) {
-                window.parent.location.reload();
-            }
-        }
-    });
-</script>
-""")
-
 query_params = st.query_params
-if "user" in query_params and not st.session_state.autenticado:
+
+# Si la URL mantiene el parámetro del usuario, no pide login y lee directo del DF fresco
+if "user" in query_params:
     correo_url = query_params["user"].strip().lower()
     if not df.empty:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
@@ -184,16 +152,12 @@ if "user" in query_params and not st.session_state.autenticado:
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
+        else:
+            # Si el correo se borró de la hoja, limpia la sesión
+            st.session_state.autenticado = False
+            st.session_state.datos = None
 
 if st.session_state.autenticado and st.session_state.datos is not None:
-    # Mantener actualizados los datos del usuario en sesión activa si el df cambió en Sheets
-    if not df.empty:
-        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-        correo_actual = str(st.session_state.datos.iloc[0]).strip().lower()
-        u_actualizado = df[df.iloc[:, 0] == correo_actual]
-        if not u_actualizado.empty:
-            st.session_state.datos = u_actualizado.iloc[0]
-
     correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
     correo_base = st.session_state.ccr_email_input
@@ -210,13 +174,12 @@ if not st.session_state.autenticado:
     if st.button("Entrar"):
         if not df.empty:
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
-            u = df[df.iloc[:, 0] == email_input]
+            u = df[df.iloc[:, 0] == email_input.strip()]
             
             if not u.empty:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
-                st.query_params["user"] = email_input
-                st.html(f"<script>localStorage.setItem('ccr_ios_mail', '{email_input}'); window.parent.location.reload();</script>")
+                st.query_params["user"] = email_input.strip()
                 st.rerun()
             else:
                 st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
@@ -239,7 +202,6 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -256,7 +218,6 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     else:
@@ -317,5 +278,34 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
+
+# --- RECONEXIÓN INVISIBLE Y LIMPIEZA DE TECLADO ---
+st.html("""
+<script>
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+
+    // Monitorea si la app se duerme (Connection timeout) al bloquear el teléfono para revivirla limpio
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+</script>
+""")
