@@ -25,10 +25,12 @@ st.markdown("""
     [data-testid="stStatusWidget"] {visibility: hidden !important;}
     .stApp { background-color: #0e1117; }
     
+    /* Bloqueo visual para dificultar la selección de elementos */
     body, .stApp {
         -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
     }
     
+    /* Título principal más grande */
     .titulo-grande {
         font-size: 42px !important;
         font-weight: bold !important;
@@ -36,6 +38,7 @@ st.markdown("""
         margin-bottom: 5px !important;
     }
     
+    /* Grid de botones de la App */
     .app-grid {
         display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;
     }
@@ -55,6 +58,7 @@ st.markdown("""
     .text-normal { color: #000000 !important; font-weight: bold; font-size: 15px; margin-top: 10px; }
     .icon { font-size: 35px; }
     
+    /* DISEÑO LLAMATIVO PARA EL EXPANDER (Estilo Card Blanca como los botones normales) */
     .stExpander {
         background-color: #ffffff !important;
         border: none !important;
@@ -210,22 +214,14 @@ if not st.session_state.autenticado:
                 """)
                 st.rerun()
             else:
-                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
+                st.error("Correo no registrado.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
     
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
-    
-    # --- FILTRO DE CONTROL ULTRA ESTRICTO ---
-    celda_dispositivo = str(u.iloc[7]).strip()
-    ids_autorizados = [i.strip() for i in celda_dispositivo.split(",") if i.strip()]
-    
-    # Si la celda en Sheets está vacía, tiene guiones o no tiene un token válido, se bloquea por defecto
-    if not celda_dispositivo or celda_dispositivo in ["", "-", "PENDIENTE"]:
-        dispositivo_valido = False
-    else:
-        dispositivo_valido = id_del_celular_actual in ids_autorizados
+    ids_autorizados = [i.strip() for i in str(u.iloc[7]).split(",") if i.strip()]
+    dispositivo_valido = id_del_celular_actual in ids_autorizados
 
     if not esta_pagado:
         st.markdown(f"""
@@ -262,10 +258,12 @@ else:
         # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
+        # MENSAJES ORIGINALES RESTAURADOS
         msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
 
+        # Grid de botones con los textos corregidos hacia el nuevo número
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
@@ -281,6 +279,7 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
+        # --- SECCIÓN DE GENERACIÓN DE PASES QR ---
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
             v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
@@ -304,6 +303,7 @@ else:
                         mime="image/png"
                     )
 
+        # --- SECCIÓN DE AVISOS ---
         texto_aviso = ""
         if not df_a.empty and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
