@@ -118,12 +118,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- BASE DE DATOS ---
+# --- BASE DE DATOS (ENLACE EN VIVO CORREGIDO) ---
 sheet_id = "1QL7WXtX8i5i35ZxLRRdr7aCGM_cjAmU53gGRxyQTpAE"
 
 def cargar_datos(gid, tiene_header=True):
     try:
-        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+        # Usamos el endpoint de la API de visualización para forzar la actualización inmediata
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&gid={gid}"
         r = requests.get(url, timeout=10)
         if tiene_header:
             return pd.read_csv(io.StringIO(r.text)).fillna("")
@@ -214,7 +215,7 @@ if not st.session_state.autenticado:
                 """)
                 st.rerun()
             else:
-                st.error("Correo no registrado.")
+                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
@@ -241,7 +242,7 @@ else:
         st.markdown(f"""
             <div class="bloqueo-dispositivo">
                 <h2>🔒 Dispositivo No Vinculado</h2>
-                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
+                <p>Hola <b>{nombre}</b>, este dispositivo no está authorized para usar tu cuenta.</p>
                 <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
                 <div class="codigo-token">{id_del_celular_actual}</div>
                 <p>Una vez validado, podrás ingresar a la plataforma.</p>
