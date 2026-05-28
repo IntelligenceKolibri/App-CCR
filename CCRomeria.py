@@ -131,16 +131,59 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- CONTROL DE PERSISTENCIA Y SESIÓN PERMANENTE ---
+# --- SISTEMA DE PERSISTENCIA Y VARIABLES DE CONTROL ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
-query_params = st.query_params
+# Script inyectado: Mantiene activa la sesión en LocalStorage, corrige teclados e impide que la app se duerma
+html_cookie_handler = """
+<script>
+    const readMail = localStorage.getItem('ccr_ios_mail');
+    if (readMail) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: readMail
+        }, '*');
+    }
+    
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
 
-# Si existe el parámetro "user" en la URL, se mantiene la sesión síncronamente
-if "user" in query_params:
+    // Si bloqueas el teléfono y la app se duerme, fuerza recarga limpia con su sesión al volver a entrar
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (readMail) {
+            localStorage.setItem('ccr_ios_mail', readMail);
+        }
+    });
+</script>
+"""
+st.html(html_cookie_handler)
+
+query_params = st.query_params
+if "user" in query_params and not st.session_state.autenticado:
     correo_url = query_params["user"].strip().lower()
     if not df.empty:
         df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
@@ -148,9 +191,6 @@ if "user" in query_params:
         if not u.empty:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
-        else:
-            st.session_state.autenticado = False
-            st.session_state.datos = None
 
 # --- GENERADOR DE ID DE DISPOSITIVO REAL (Navegador + Huella digital) ---
 headers = st.context.headers
@@ -159,6 +199,13 @@ accept_language = headers.get("Accept-Language", "es")
 huella_digital = f"{user_agent}-{accept_language}"
 hash_dispositivo = hashlib.md5(huella_digital.encode()).hexdigest().upper()
 id_del_celular_actual = f"CCR-{hash_dispositivo[:5]}-DISP"
+
+if st.session_state.autenticado and st.session_state.datos is not None:
+    correo_base = str(st.session_state.datos.iloc[0])
+elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
+    correo_base = st.session_state.ccr_email_input
+else:
+    correo_base = "invitado"
 
 st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
@@ -173,13 +220,7 @@ if not st.session_state.autenticado:
                 st.session_state.datos = u.iloc[0]
                 st.session_state.autenticado = True
                 st.query_params["user"] = email_input
-                # Guarda en el disco duro del navegador para persistir cuando se cierre la pestaña por completo
-                st.html(f"""
-                <script>
-                    localStorage.setItem('ccr_perma_user', '{email_input}');
-                    window.parent.location.reload();
-                </script>
-                """)
+                st.html(f"<script>localStorage.setItem('ccr_ios_mail', '{email_input}'); window.parent.location.reload();</script>")
                 st.rerun()
             else:
                 st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
@@ -189,7 +230,7 @@ else:
     
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
     
-    # --- FILTRO DE CONTROL ULTRA ESTRICTO DISPOSITIVO REAL ---
+    # --- FILTRO DE CONTROL ULTRA ESTRICTO ---
     contenido_celda_dispositivo = str(u.iloc[7]).strip()
     ids_autorizados = [i.strip() for i in contenido_celda_dispositivo.split(",") if i.strip()]
     
@@ -209,7 +250,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     elif not dispositivo_valido:
@@ -226,7 +267,7 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
             
     else:
@@ -288,42 +329,5 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_perma_user'); window.parent.location.reload();</script>""")
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
-
-# --- RECUPERADOR DE DISCO DURO, FORMATEADOR Y ANTI-DORMIDO ---
-st.html("""
-<script>
-    // Recuperación síncrona si la URL viene limpia tras cerrar la pestaña
-    const savedUser = localStorage.getItem('ccr_perma_user');
-    const currentUrl = new URL(window.parent.location.href);
-    if (savedUser && !currentUrl.searchParams.has('user')) {
-        currentUrl.searchParams.set('user', savedUser);
-        window.parent.location.href = currentUrl.toString();
-    }
-
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
-        inputs.forEach(input => {
-            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'email');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
-                                 window.parent.document.body.innerText.includes('is sleeping');
-            
-            if (appCrashed || overlayError) {
-                window.parent.location.reload();
-            }
-        }
-    });
-</script>
-""")
