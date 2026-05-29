@@ -25,6 +25,11 @@ st.markdown("""
     [data-testid="stStatusWidget"] {visibility: hidden !important;}
     .stApp { background-color: #0e1117; }
     
+    /* Ocultar el cactus, la corona y el menú flotante inferior de Streamlit */
+    iframe, [data-testid="stConnectionStatus"], .stAppDeployButton { display: none !important; }
+    #tabs-bcontainer-teams { display: none !important; }
+    [style*="viewerBadge"] { display: none !important; }
+    
     body, .stApp {
         -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
     }
