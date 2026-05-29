@@ -285,6 +285,7 @@ else:
         msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
+        msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
 
         st.markdown(f'''
             <div class="app-grid">
@@ -296,6 +297,8 @@ else:
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_paq}" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
+                <a href="https://wa.me/525543319636?text={msg_anim}" target="_blank" class="card card-normal">
+                    <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
