@@ -25,10 +25,16 @@ st.markdown("""
     [data-testid="stStatusWidget"] {visibility: hidden !important;}
     .stApp { background-color: #0e1117; }
     
-    /* Ocultar el cactus, la corona y el menú flotante inferior de Streamlit */
-    iframe, [data-testid="stConnectionStatus"], .stAppDeployButton { display: none !important; }
-    #tabs-bcontainer-teams { display: none !important; }
-    [style*="viewerBadge"] { display: none !important; }
+    /* BLOQUEO CORRECTO DE LA BARRA INFERIOR (CACTUS Y CORONA) */
+    footer, [data-testid="stFooter"], .stActionButton, [class*="viewerBadge"] {
+        display: none !important;
+    }
+    iframe[title="streamlit_app"], [data-testid="stConnectionStatus"] {
+        display: none !important;
+    }
+    div[style*="viewerBadge"], div[class*="viewerBadge"] {
+        display: none !important;
+    }
     
     body, .stApp {
         -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
