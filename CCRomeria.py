@@ -86,12 +86,20 @@ st.markdown("""
         border: 1px solid rgba(0,0,0,0.1) !important;
         border-radius: 10px !important;
     }
-    [data-testid="stExpanderDetails"] button {
+    
+    /* CONTROL ESTRICTO DE BOTONES PARA EVITAR DESFASE EN TEMA CLARO */
+    .stButton>button, .stDownloadButton>button {
         background-color: #262730 !important;
         color: white !important;
-        border: none !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
         border-radius: 10px !important;
         padding: 10px 20px !important;
+    }
+    
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        background-color: #31333F !important;
+        color: white !important;
+        border: 1px solid rgba(255,255,255,0.4) !important;
     }
     
     .aviso-pago {
@@ -331,3 +339,32 @@ else:
             st.query_params.clear()
             st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
+
+# --- AUTO-REFRESCO PARA EVITAR QUE SE DUERMA LA APP Y AJUSTES DE TECLADO ---
+st.html("""
+<script>
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+</script>
+""")
