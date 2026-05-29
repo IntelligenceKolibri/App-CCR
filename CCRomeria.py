@@ -297,7 +297,7 @@ else:
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_paq}" target="_blank" class="card card-normal">
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
-                <a href="https://wa.me/525543319636?text={msg_anim}" target="_blank" class="card card-normal">
+                <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
                     <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
