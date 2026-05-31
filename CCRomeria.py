@@ -293,6 +293,8 @@ else:
                     <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
                 <a href="tel:911" class="card card-normal">
                     <div class="icon">📞</div><p class="text-normal">911</p></a>
+                <a href="tel:5554234418" class="card card-normal">
+                    <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
                 <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_paq}" target="_blank" class="card card-normal">
