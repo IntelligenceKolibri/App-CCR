@@ -330,13 +330,21 @@ else:
                     )
 
         texto_aviso = ""
-        if not df_a.empty wildlife and len(df_a.columns) > 0:
+        if not df_a.empty and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
         
         if not texto_aviso:
             texto_aviso = "No hay avisos vigentes por el momento."
             
         st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{texto_aviso}</div>', unsafe_allow_html=True)
+
+        # --- AVISO DE PRIVACIDAD DISCRETO AL FINAL ---
+        st.markdown("""
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;">
+        <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: justify; line-height: 1.4; padding: 0 10px; margin-bottom: 20px;">
+            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Su nombre y dirección (número de casa) serán vinculados estrictamente para habilitar y operar los servicios internos otorgados a los residentes, tales como el envío de alertas mediante el botón de pánico, la recepción y control de paquetería, y el registro seguro para la generación de pases de visitas. Estos datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operación de esta comunidad.
+        </div>
+        """, unsafe_allow_html=True)
 
         if st.button("Cerrar Sesión"):
             st.session_state.autenticado = False
