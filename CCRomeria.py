@@ -231,7 +231,7 @@ if not st.session_state.autenticado:
                 st.html(f"<script>localStorage.setItem('ccr_ios_mail', '{email_input}'); window.parent.location.reload();</script>")
                 st.rerun()
             else:
-                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la administración para habilitar tu acceso.")
+                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la coordinación para habilitar tu acceso.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
@@ -330,7 +330,7 @@ else:
                     )
 
         texto_aviso = ""
-        if not df_a.empty and len(df_a.columns) > 0:
+        if not df_a.empty wildlife and len(df_a.columns) > 0:
             texto_aviso = str(df_a.iloc[0, 0]).strip()
         
         if not texto_aviso:
