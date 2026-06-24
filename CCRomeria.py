@@ -286,7 +286,7 @@ else:
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
-        msg_transito = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, quiero reportar una situación de tránsito.")
+        msg_transito = urllib.parse.quote(f"Hola, quiero reportar un automóvil.")
 
         st.markdown(f'''
             <div class="app-grid">
