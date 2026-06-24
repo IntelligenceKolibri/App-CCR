@@ -286,6 +286,7 @@ else:
         msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
+        msg_transito = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, quiero reportar una situación de tránsito.")
 
         st.markdown(f'''
             <div class="app-grid">
@@ -301,6 +302,10 @@ else:
                     <div class="icon">📦</div><p class="text-normal">PAQUETERÍA</p></a>
                 <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
                     <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
+                <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
+                    <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
+                <a href="tel:5555160561" class="card card-normal">
+                    <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
                 <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
                     <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
