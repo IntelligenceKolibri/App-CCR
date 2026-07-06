@@ -283,7 +283,7 @@ else:
         st.markdown(f"### Hola, {nombre.split()[0]}")
         
         msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
-        msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete?")
+        msg_paq = urllib.parse.quote(f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?")
         msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
         msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
