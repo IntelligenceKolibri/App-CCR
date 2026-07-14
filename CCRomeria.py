@@ -209,9 +209,9 @@ hash_dispositivo = hashlib.md5(huella_digital.encode()).hexdigest().upper()
 id_del_celular_actual = f"CCR-{hash_dispositivo[:5]}-DISP"
 
 if st.session_state.autenticado and st.session_state.datos is not None:
-    correo_base = str(st.session_state.datos.iloc[0]).strip().lower()
+    correo_base = str(st.session_state.datos.iloc[0])
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
-    correo_base = st.session_state.ccr_email_input.strip().lower()
+    correo_base = st.session_state.ccr_email_input
 else:
     correo_base = "invitado"
 
@@ -288,14 +288,6 @@ else:
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
         msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
 
-        # Ocultar el botón de reporte financiero si el usuario es "123"
-        boton_reporte_html = ""
-        if correo_base != "123":
-            boton_reporte_html = '''
-                <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
-                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
-            '''
-
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
@@ -314,7 +306,8 @@ else:
                     <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
                 <a href="tel:5555160561" class="card card-normal">
                     <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
-                {boton_reporte_html}
+                <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
+                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
