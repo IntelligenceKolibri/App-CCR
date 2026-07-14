@@ -288,13 +288,8 @@ else:
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
         msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
 
-        # Ocultar el botón de reporte financiero si el usuario es "123"
-        boton_reporte_html = ""
-        if correo_base != "123":
-            boton_reporte_html = '''
-                <a href="https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view" target="_blank" class="card card-normal">
-                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
-            '''
+        # Condición para deshabilitar el enlace si el correo es "123"
+        enlace_reporte = "javascript:void(0);" if correo_base == "123" else "https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view"
 
         st.markdown(f'''
             <div class="app-grid">
@@ -314,7 +309,8 @@ else:
                     <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
                 <a href="tel:5555160561" class="card card-normal">
                     <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
-                {boton_reporte_html}
+                <a href="{enlace_reporte}" target="_blank" class="card card-normal">
+                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
@@ -354,7 +350,7 @@ else:
         st.markdown("""
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;">
         <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: justify; line-height: 1.4; padding: 0 10px; margin-bottom: 20px;">
-            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Su nombre y dirección (número de casa) serán vinculados estrictamente para habilitar y operar los servicios internos otorgados a los residentes, tales como el envío de alertas mediante el botón de pánico, la recepción y control de paquetería, y el registro seguro para la generación de pases de visitas. Estos datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operación de esta comunidad.
+            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Su nombre y dirección (número de casa) serán vinculados estrictamente para habilitar y operar los servicios internos otorgados a los residentes, tales como el envío de alertas mediante el botón de pánico, la recepción y control de paquetería, y el registro seguro para la generación de pases de visitas. Estos datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operation de esta comunidad.
         </div>
         """, unsafe_allow_html=True)
 
