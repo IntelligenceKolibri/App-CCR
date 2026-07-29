@@ -314,6 +314,26 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
+        with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
+            paq_nombre = st.text_input("Nombre de quien viene el paquete:", key="paq_nom")
+            paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp")
+            
+            if st.button("Solicitar", key="btn_solicitud_paq"):
+                if paq_nombre.strip() == "" or paq_empresa.strip() == "":
+                    st.warning("Por favor ingresa ambos datos para continuar.")
+                else:
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}"
+                    msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
+                    url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
+                    
+                    st.markdown(f'''
+                        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
+                            <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
+                                📲 Abrir WhatsApp y enviar solicitud
+                            </div>
+                        </a>
+                    ''', unsafe_allow_html=True)
+
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
             v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
@@ -350,7 +370,7 @@ else:
         st.markdown("""
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;">
         <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: justify; line-height: 1.4; padding: 0 10px; margin-bottom: 20px;">
-            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Su nombre y dirección (número de casa) serán vinculados estrictamente para habilitar y operar los servicios internos otorgados a los residentes, tales como el envío de alertas mediante el botón de pánico, la recepción y control de paquetería, y el registro seguro para la generación de pases de visitas. Estos datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operation de esta comunidad.
+            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Su nombre y dirección (número de casa) serán vinculados strictly para habilitar y operar los servicios internos otorgados a los residentes, tales como el envío de alertas mediante el botón de pánico, la recepción y control de paquetería, y el registro seguro para la generación de pases de visitas. Estos datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operación de esta comunidad.
         </div>
         """, unsafe_allow_html=True)
 
@@ -389,3 +409,4 @@ st.html("""
     });
 </script>
 """)
+
