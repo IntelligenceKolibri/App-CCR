@@ -80,7 +80,7 @@ st.markdown("""
         color: #000000 !important;
         font-weight: 600 !important;
     }
-    [data-testid="stExpanderDetails"] input {
+    [data-testid="stExpanderDetails"] input, [data-testid="stExpanderDetails"] textarea {
         background-color: #f0f2f6 !important;
         color: #000000 !important;
         border: 1px solid rgba(0,0,0,0.1) !important;
@@ -157,7 +157,7 @@ html_cookie_handler = """
     }
     
     setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
         inputs.forEach(input => {
             if(input.parentElement.innerText.toLowerCase().includes('correo')) {
                 input.setAttribute('autocapitalize', 'none');
@@ -168,7 +168,6 @@ html_cookie_handler = """
         });
     }, 1000);
 
-    # Si bloqueas el teléfono y la app se duerme, fuerza recarga limpia con su sesión al volver a entrar
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
@@ -302,22 +301,26 @@ else:
         with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
             paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
             paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
+            paq_comentarios = st.text_input("Comentarios adicionales (opcional):", key="paq_comentarios_form")
             
             if st.button("Solicitar", key="btn_solicitar_paq"):
-                if paq_nombre.strip() == "" or paq_empresa.strip() == "":
-                    st.warning("Por favor ingresa ambos datos para continuar.")
+                if paq_nombre.strip() == "" or paq_empresa.strip() == "" or paq_comentarios.strip() == "":
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?"
                 else:
-                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}"
-                    msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
-                    url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
-                    
-                    st.markdown(f'''
-                        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-                            <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
-                                📲 Abrir WhatsApp y enviar solicitud
-                            </div>
-                        </a>
-                    ''', unsafe_allow_html=True)
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}. Comentarios: {paq_comentarios.strip()}"
+                
+                msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
+                url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
+                
+                st.markdown(f'''
+                    <meta http-equiv="refresh" content="0;url={url_wa}">
+                    <script>
+                        window.open("{url_wa}", "_blank");
+                    </script>
+                    <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
+                        📲 Redirigiendo a WhatsApp... <a href="{url_wa}" target="_blank" style="color: white; text-decoration: underline;">Haz clic aquí si no abre automáticamente</a>
+                    </div>
+                ''', unsafe_allow_html=True)
 
         # 3. RESTO DE LA CUADRÍCULA DE BOTONES
         st.markdown(f'''
@@ -390,7 +393,7 @@ else:
 st.html("""
 <script>
     setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
         inputs.forEach(input => {
             if(input.parentElement.innerText.toLowerCase().includes('correo')) {
                 input.setAttribute('autocapitalize', 'none');
