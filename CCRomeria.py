@@ -139,50 +139,6 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-# --- SISTEMA DE PERSISTENCIA AUTOMÁTICA EN DISPOSITIVO ---
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-if 'datos' not in st.session_state:
-    st.session_state.datos = None
-
-# Inyección de script para leer la sesión previa y mantenerla activa
-html_cookie_handler = """
-<script>
-    const savedUser = localStorage.getItem('ccr_user_logged');
-    if (savedUser && !window.location.search.includes('user=')) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('user', savedUser);
-        window.location.href = url.href;
-    }
-
-    setInterval(() => {
-        const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
-        inputs.forEach(input => {
-            const labelText = input.parentElement ? input.parentElement.innerText.toLowerCase() : '';
-            if(labelText.includes('correo') || labelText.includes('teléfono') || labelText.includes('telefono')) {
-                input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'off');
-                input.setAttribute('autocorrect', 'off');
-                input.setAttribute('spellcheck', 'false');
-            }
-        });
-    }, 1000);
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
-                                 window.parent.document.body.innerText.includes('is sleeping');
-            
-            if (appCrashed || overlayError) {
-                window.parent.location.reload();
-            }
-        }
-    });
-</script>
-"""
-st.html(html_cookie_handler)
-
 def buscar_usuario(valor):
     val = str(valor).strip().lower().replace(" ", "").replace("-", "")
     if df.empty or not val:
@@ -194,6 +150,12 @@ def buscar_usuario(valor):
             return match.iloc[0]
     return None
 
+# --- RECUPERACIÓN DE SESIÓN PERSISTENTE AL REFRESCAR / RECARGAR ---
+if 'autenticado' not in st.session_state:
+    st.session_state.autenticado = False
+if 'datos' not in st.session_state:
+    st.session_state.datos = None
+
 query_params = st.query_params
 if "user" in query_params and not st.session_state.autenticado:
     user_url = query_params["user"].strip().lower()
@@ -201,6 +163,22 @@ if "user" in query_params and not st.session_state.autenticado:
     if u_found is not None:
         st.session_state.datos = u_found
         st.session_state.autenticado = True
+
+# Sincronización automática de localStorage a URL si se pierde el parámetro de URL
+st.components.v1.html("""
+<script>
+    try {
+        var savedUser = localStorage.getItem('ccr_user_logged');
+        var targetWindow = window.top || window.parent || window;
+        var currentUrl = new URL(targetWindow.location.href);
+        
+        if (savedUser && !currentUrl.searchParams.has('user')) {
+            currentUrl.searchParams.set('user', savedUser);
+            targetWindow.location.replace(currentUrl.href);
+        }
+    } catch(e) {}
+</script>
+""", height=0)
 
 # --- GENERADOR DE ID DE DISPOSITIVO ---
 headers = st.context.headers
@@ -225,7 +203,13 @@ if not st.session_state.autenticado:
             st.session_state.datos = u_data
             st.session_state.autenticado = True
             st.query_params["user"] = user_input
-            st.html(f"<script>localStorage.setItem('ccr_user_logged', '{user_input}'); window.location.reload();</script>")
+            st.components.v1.html(f"""
+                <script>
+                    try {{
+                        localStorage.setItem('ccr_user_logged', '{user_input}');
+                    }} catch(e) {{}}
+                </script>
+            """, height=0)
             st.rerun()
         else:
             st.error("El número de teléfono o correo ingresado no se encuentra registrado.")
@@ -249,7 +233,6 @@ else:
     contenido_celda_dispositivo = str(u.iloc[7]).strip() if len(u) > 7 else ""
     ids_autorizados = [i.strip() for i in contenido_celda_dispositivo.split(",") if i.strip()]
 
-    # Si el número de dispositivos supera el límite y este ID actual no está registrado
     if len(ids_autorizados) >= limite_permitido and id_del_celular_actual not in ids_autorizados:
         dispositivo_valido = False
     else:
@@ -266,7 +249,17 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_user_logged'); window.location.reload();</script>""")
+            st.components.v1.html("""
+                <script>
+                    try {
+                        localStorage.removeItem('ccr_user_logged');
+                        var targetWindow = window.top || window.parent || window;
+                        var url = new URL(targetWindow.location.href);
+                        url.searchParams.delete('user');
+                        targetWindow.location.replace(url.href);
+                    } catch(e) {}
+                </script>
+            """, height=0)
             st.rerun()
 
     elif not dispositivo_valido:
@@ -282,7 +275,17 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_user_logged'); window.location.reload();</script>""")
+            st.components.v1.html("""
+                <script>
+                    try {
+                        localStorage.removeItem('ccr_user_logged');
+                        var targetWindow = window.top || window.parent || window;
+                        var url = new URL(targetWindow.location.href);
+                        url.searchParams.delete('user');
+                        targetWindow.location.replace(url.href);
+                    } catch(e) {}
+                </script>
+            """, height=0)
             st.rerun()
 
     else:
@@ -403,5 +406,33 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_user_logged'); window.location.href = window.location.pathname;</script>""")
+            st.components.v1.html("""
+                <script>
+                    try {
+                        localStorage.removeItem('ccr_user_logged');
+                        var targetWindow = window.top || window.parent || window;
+                        var url = new URL(targetWindow.location.href);
+                        url.searchParams.delete('user');
+                        targetWindow.location.replace(url.href);
+                    } catch(e) {}
+                </script>
+            """, height=0)
             st.rerun()
+
+# --- PREVENCIÓN DE TECLADO Y RECARGA ---
+st.html("""
+<script>
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(input => {
+            const labelText = input.parentElement ? input.parentElement.innerText.toLowerCase() : '';
+            if(labelText.includes('correo') || labelText.includes('teléfono') || labelText.includes('telefono')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'off');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+</script>
+""")
