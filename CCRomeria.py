@@ -303,7 +303,7 @@ else:
             paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
             paq_comentarios = st.text_input("Comentarios adicionales (opcional):", key="paq_comentarios_form")
             
-            if st.button("Solicitar", key="btn_solicitar_paq"):
+            if st.button("Confirmar", key="btn_confirmar_paq"):
                 v_nom = paq_nombre.strip()
                 v_emp = paq_empresa.strip()
                 v_com = paq_comentarios.strip()
@@ -327,8 +327,8 @@ else:
                 
                 st.markdown(f'''
                     <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-                        <div style="background-color: #25D366; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-                            📲 Abrir WhatsApp para enviar solicitud
+                        <div style="background-color: #d32f2f; color: white; padding: 16px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                            📦 SOLICITAR RECEPCIÓN DE PAQUETE
                         </div>
                     </a>
                 ''', unsafe_allow_html=True)
