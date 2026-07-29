@@ -144,8 +144,6 @@ if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
-if 'mostrar_form_paquetes' not in st.session_state:
-    st.session_state.mostrar_form_paquetes = False
 
 # Script inyectado: Mantiene activa la sesión en LocalStorage, corrige teclados e impide que la app se duerma
 html_cookie_handler = """
@@ -302,13 +300,6 @@ else:
                     <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
                 <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
                     <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
-        ''', unsafe_allow_html=True)
-
-        # Botón dinámico para PAQUETERÍA en la cuadrícula
-        if st.button("📦\nPAQUETERÍA", key="btn_card_paquetria"):
-            st.session_state.mostrar_form_paquetes = True
-
-        st.markdown(f'''
                 <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
                     <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
                 <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
@@ -320,33 +311,25 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
-        # FORMULARIO DE PAQUETERÍA (Se despliega automáticamente arriba al pulsar el botón de Paquetería)
-        if st.session_state.mostrar_form_paquetes:
-            with st.container():
-                st.markdown("### 📦 Recepción de Paquete")
-                paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_directo")
-                paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_directo")
-                
-                col_sol, col_canc = st.columns([1, 1])
-                with col_sol:
-                    if st.button("Solicitar", key="btn_solicitar_wa_paq"):
-                        if paq_nombre.strip() == "" or paq_empresa.strip() == "":
-                            st.warning("Por favor completa ambos campos.")
-                        else:
-                            texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}"
-                            msg_encoded = urllib.parse.quote(texto_solicitud)
-                            url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_encoded}"
-                            st.markdown(f'''
-                                <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-                                    <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
-                                        📲 Abrir WhatsApp y Enviar
-                                    </div>
-                                </a>
-                            ''', unsafe_allow_html=True)
-                with col_canc:
-                    if st.button("Ocultar", key="btn_ocultar_paq"):
-                        st.session_state.mostrar_form_paquetes = False
-                        st.rerun()
+        with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
+            paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
+            paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
+            
+            if st.button("Solicitar", key="btn_solicitar_paq"):
+                if paq_nombre.strip() == "" or paq_empresa.strip() == "":
+                    st.warning("Por favor ingresa ambos datos para continuar.")
+                else:
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}"
+                    msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
+                    url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
+                    
+                    st.markdown(f'''
+                        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
+                            <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
+                                📲 Abrir WhatsApp y enviar solicitud
+                            </div>
+                        </a>
+                    ''', unsafe_allow_html=True)
 
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
