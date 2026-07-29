@@ -304,22 +304,33 @@ else:
             paq_comentarios = st.text_input("Comentarios adicionales (opcional):", key="paq_comentarios_form")
             
             if st.button("Solicitar", key="btn_solicitar_paq"):
-                if paq_nombre.strip() == "" or paq_empresa.strip() == "" or paq_comentarios.strip() == "":
+                v_nom = paq_nombre.strip()
+                v_emp = paq_empresa.strip()
+                v_com = paq_comentarios.strip()
+
+                # Si todo está vacío, envía el mensaje original de siempre
+                if not v_nom and not v_emp and not v_com:
                     texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?"
                 else:
-                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene a nombre de {paq_nombre.strip()}, de {paq_empresa.strip()}. Comentarios: {paq_comentarios.strip()}"
+                    detalles = []
+                    if v_nom:
+                        detalles.append(f"a nombre de {v_nom}")
+                    if v_emp:
+                        detalles.append(f"de {v_emp}")
+                    if v_com:
+                        detalles.append(f"Comentarios: {v_com}")
+                    
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene " + ", ".join(detalles)
                 
                 msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
                 url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
                 
                 st.markdown(f'''
-                    <meta http-equiv="refresh" content="0;url={url_wa}">
-                    <script>
-                        window.open("{url_wa}", "_blank");
-                    </script>
-                    <div style="background-color: #25D366; color: white; padding: 12px; border-radius: 10px; text-align: center; font-weight: bold; margin-top: 10px;">
-                        📲 Redirigiendo a WhatsApp... <a href="{url_wa}" target="_blank" style="color: white; text-decoration: underline;">Haz clic aquí si no abre automáticamente</a>
-                    </div>
+                    <a href="{url_wa}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color: #25D366; color: white; padding: 14px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+                            📲 Abrir WhatsApp para enviar solicitud
+                        </div>
+                    </a>
                 ''', unsafe_allow_html=True)
 
         # 3. RESTO DE LA CUADRÍCULA DE BOTONES
