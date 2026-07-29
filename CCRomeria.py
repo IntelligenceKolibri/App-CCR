@@ -168,7 +168,7 @@ html_cookie_handler = """
         });
     }, 1000);
 
-    // Si bloqueas el teléfono y la app se duerme, fuerza recarga limpia con su sesión al volver a entrar
+    # Si bloqueas el teléfono y la app se duerme, fuerza recarga limpia con su sesión al volver a entrar
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
             const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
@@ -290,27 +290,15 @@ else:
         # Condición para deshabilitar el enlace si el correo es "123"
         enlace_reporte = "javascript:void(0);" if correo_base == "123" else "https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view"
 
+        # 1. BOTÓN DE PÁNICO (Arriba de todo)
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
                     <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
-                <a href="tel:911" class="card card-normal">
-                    <div class="icon">📞</div><p class="text-normal">911</p></a>
-                <a href="tel:5554234418" class="card card-normal">
-                    <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
-                <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
-                    <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
-                <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
-                    <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
-                <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
-                    <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
-                <a href="tel:5555160561" class="card card-normal">
-                    <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
-                <a href="{enlace_reporte}" target="_blank" class="card card-normal">
-                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
+        # 2. EXPANSOR DE PAQUETERÍA (Justo abajo de Pánico)
         with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
             paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
             paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
@@ -330,6 +318,26 @@ else:
                             </div>
                         </a>
                     ''', unsafe_allow_html=True)
+
+        # 3. RESTO DE LA CUADRÍCULA DE BOTONES
+        st.markdown(f'''
+            <div class="app-grid">
+                <a href="tel:911" class="card card-normal">
+                    <div class="icon">📞</div><p class="text-normal">911</p></a>
+                <a href="tel:5554234418" class="card card-normal">
+                    <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
+                <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
+                    <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
+                <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
+                    <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
+                <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
+                    <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
+                <a href="tel:5555160561" class="card card-normal">
+                    <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
+                <a href="{enlace_reporte}" target="_blank" class="card card-normal">
+                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
+            </div>
+        ''', unsafe_allow_html=True)
 
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
