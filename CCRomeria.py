@@ -139,48 +139,67 @@ def cargar_datos(gid, tiene_header=True):
 df = cargar_datos("0", tiene_header=True)
 df_a = cargar_datos("222722358", tiene_header=False)
 
-def buscar_usuario(valor):
-    val = str(valor).strip().lower().replace(" ", "").replace("-", "")
-    if df.empty or not val:
-        return None
-    for col in df.columns:
-        serie_limpia = df[col].astype(str).str.strip().str.lower().str.replace(" ", "").str.replace("-", "")
-        match = df[serie_limpia == val]
-        if not match.empty:
-            return match.iloc[0]
-    return None
-
-# --- RECUPERACIÓN DE SESIÓN PERSISTENTE AL REFRESCAR / RECARGAR ---
+# --- SISTEMA DE PERSISTENCIA Y VARIABLES DE CONTROL ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
 
+# Script inyectado: Mantiene activa la sesión en LocalStorage, corrige teclados e impide que la app se duerma
+html_cookie_handler = """
+<script>
+    const readMail = localStorage.getItem('ccr_ios_mail');
+    if (readMail) {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: readMail
+        }, '*');
+    }
+    
+    setInterval(() => {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
+        inputs.forEach(input => {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
+                input.setAttribute('autocapitalize', 'none');
+                input.setAttribute('autocomplete', 'email');
+                input.setAttribute('autocorrect', 'off');
+                input.setAttribute('spellcheck', 'false');
+            }
+        });
+    }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        if (readMail) {
+            localStorage.setItem('ccr_ios_mail', readMail);
+        }
+    });
+</script>
+"""
+st.html(html_cookie_handler)
+
 query_params = st.query_params
 if "user" in query_params and not st.session_state.autenticado:
-    user_url = query_params["user"].strip().lower()
-    u_found = buscar_usuario(user_url)
-    if u_found is not None:
-        st.session_state.datos = u_found
-        st.session_state.autenticado = True
+    correo_url = query_params["user"].strip().lower()
+    if not df.empty:
+        df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
+        u = df[df.iloc[:, 0] == correo_url]
+        if not u.empty:
+            st.session_state.datos = u.iloc[0]
+            st.session_state.autenticado = True
 
-# Sincronización automática de localStorage a URL si se pierde el parámetro de URL
-st.components.v1.html("""
-<script>
-    try {
-        var savedUser = localStorage.getItem('ccr_user_logged');
-        var targetWindow = window.top || window.parent || window;
-        var currentUrl = new URL(targetWindow.location.href);
-        
-        if (savedUser && !currentUrl.searchParams.has('user')) {
-            currentUrl.searchParams.set('user', savedUser);
-            targetWindow.location.replace(currentUrl.href);
-        }
-    } catch(e) {}
-</script>
-""", height=0)
-
-# --- GENERADOR DE ID DE DISPOSITIVO ---
+# --- GENERADOR DE ID DE DISPOSITIVO REAL (Navegador + Huella digital) ---
 headers = st.context.headers
 user_agent = headers.get("User-Agent", "Desconocido")
 accept_language = headers.get("Accept-Language", "es")
@@ -190,53 +209,42 @@ id_del_celular_actual = f"CCR-{hash_dispositivo[:5]}-DISP"
 
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0]).strip().lower()
+elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
+    correo_base = st.session_state.ccr_email_input.strip().lower()
 else:
     correo_base = "invitado"
 
 st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
 if not st.session_state.autenticado:
-    user_input = st.text_input("Ingresa tu número de teléfono o correo electrónico:", key="ccr_login_input").strip().lower()
+    email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
     if st.button("Entrar"):
-        u_data = buscar_usuario(user_input)
-        if u_data is not None:
-            st.session_state.datos = u_data
-            st.session_state.autenticado = True
-            st.query_params["user"] = user_input
-            st.components.v1.html(f"""
-                <script>
-                    try {{
-                        localStorage.setItem('ccr_user_logged', '{user_input}');
-                    }} catch(e) {{}}
-                </script>
-            """, height=0)
-            st.rerun()
-        else:
-            st.error("El número de teléfono o correo ingresado no se encuentra registrado.")
+        if not df.empty:
+            df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
+            u = df[df.iloc[:, 0] == email_input]
+            
+            if not u.empty:
+                st.session_state.datos = u.iloc[0]
+                st.session_state.autenticado = True
+                st.query_params["user"] = email_input
+                st.html(f"<script>localStorage.setItem('ccr_ios_mail', '{email_input}'); window.parent.location.reload();</script>")
+                st.rerun()
+            else:
+                st.error("El correo ingresado no se encuentra registrado. Por favor, verifícalo o contacta a la coordinación para habilitar tu acceso.")
 else:
     u = st.session_state.datos
     nombre, casa = u.iloc[1], u.iloc[2]
+    
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
-
-    # --- VALIDACIÓN DINÁMICA POR Dispositivos_Permitidos ---
-    limite_permitido = 2
-    for col in df.columns:
-        if "dispositivos_permitidos" in str(col).lower().replace(" ", "_"):
-            try:
-                val_limite = int(u[col])
-                if val_limite > 0:
-                    limite_permitido = val_limite
-            except:
-                pass
-            break
-
-    contenido_celda_dispositivo = str(u.iloc[7]).strip() if len(u) > 7 else ""
+    
+    # --- FILTRO DE CONTROL ULTRA ESTRICTO ---
+    contenido_celda_dispositivo = str(u.iloc[7]).strip()
     ids_autorizados = [i.strip() for i in contenido_celda_dispositivo.split(",") if i.strip()]
-
-    if len(ids_autorizados) >= limite_permitido and id_del_celular_actual not in ids_autorizados:
+    
+    if not ids_autorizados or contenido_celda_dispositivo in ["", "-", "PENDIENTE"]:
         dispositivo_valido = False
     else:
-        dispositivo_valido = True
+        dispositivo_valido = id_del_celular_actual in ids_autorizados
 
     if not esta_pagado:
         st.markdown(f"""
@@ -249,45 +257,26 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.components.v1.html("""
-                <script>
-                    try {
-                        localStorage.removeItem('ccr_user_logged');
-                        var targetWindow = window.top || window.parent || window;
-                        var url = new URL(targetWindow.location.href);
-                        url.searchParams.delete('user');
-                        targetWindow.location.replace(url.href);
-                    } catch(e) {}
-                </script>
-            """, height=0)
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
-
+            
     elif not dispositivo_valido:
         st.markdown(f"""
             <div class="bloqueo-dispositivo">
-                <h2>🔒 Límite de Dispositivos Alcanzado</h2>
-                <p>Hola <b>{nombre}</b>, has superado el límite de dispositivos autorizados ({limite_permitido}).</p>
-                <p>Para solicitar el acceso, envía este código a la <b>coordinación</b>:</p>
+                <h2>🔒 Dispositivo No Vinculado</h2>
+                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
+                <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
                 <div class="codigo-token">{id_del_celular_actual}</div>
+                <p>Una vez validado, podrás ingresar a la plataforma.</p>
             </div>
         """, unsafe_allow_html=True)
         if st.button("Salir"):
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.components.v1.html("""
-                <script>
-                    try {
-                        localStorage.removeItem('ccr_user_logged');
-                        var targetWindow = window.top || window.parent || window;
-                        var url = new URL(targetWindow.location.href);
-                        url.searchParams.delete('user');
-                        targetWindow.location.replace(url.href);
-                    } catch(e) {}
-                </script>
-            """, height=0)
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
-
+            
     else:
         # --- ACCESO CORRECTO ---
         st.markdown(f"### Hola, {nombre.split()[0]}")
@@ -297,9 +286,10 @@ else:
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
         msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
 
+        # Condición para deshabilitar el enlace si el correo es "123"
         enlace_reporte = "javascript:void(0);" if correo_base == "123" else "https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view"
 
-        # 1. BOTÓN DE PÁNICO
+        # 1. BOTÓN DE PÁNICO (Arriba de todo)
         st.markdown(f'''
             <div class="app-grid">
                 <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
@@ -307,7 +297,7 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
-        # 2. EXPANSOR DE PAQUETERÍA
+        # 2. EXPANSOR DE PAQUETERÍA (Justo abajo de Pánico)
         with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
             paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
             paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
@@ -318,6 +308,7 @@ else:
                 v_emp = paq_empresa.strip()
                 v_com = paq_comentarios.strip()
 
+                # Si todo está vacío, envía el mensaje original de siempre
                 if not v_nom and not v_emp and not v_com:
                     texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?"
                 else:
@@ -406,33 +397,34 @@ else:
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
-            st.components.v1.html("""
-                <script>
-                    try {
-                        localStorage.removeItem('ccr_user_logged');
-                        var targetWindow = window.top || window.parent || window;
-                        var url = new URL(targetWindow.location.href);
-                        url.searchParams.delete('user');
-                        targetWindow.location.replace(url.href);
-                    } catch(e) {}
-                </script>
-            """, height=0)
+            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
             st.rerun()
 
-# --- PREVENCIÓN DE TECLADO Y RECARGA ---
+# --- AUTO-REFRESCO PARA EVITAR QUE SE DUERMA LA APP Y AJUSTES DE TECLADO ---
 st.html("""
 <script>
     setInterval(() => {
         const inputs = window.parent.document.querySelectorAll('input[type="text"], textarea');
         inputs.forEach(input => {
-            const labelText = input.parentElement ? input.parentElement.innerText.toLowerCase() : '';
-            if(labelText.includes('correo') || labelText.includes('teléfono') || labelText.includes('telefono')) {
+            if(input.parentElement.innerText.toLowerCase().includes('correo')) {
                 input.setAttribute('autocapitalize', 'none');
-                input.setAttribute('autocomplete', 'off');
+                input.setAttribute('autocomplete', 'email');
                 input.setAttribute('autocorrect', 'off');
                 input.setAttribute('spellcheck', 'false');
             }
         });
     }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const appCrashed = !window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            const overlayError = window.parent.document.body.innerText.includes('Connection timeout') || 
+                                 window.parent.document.body.innerText.includes('is sleeping');
+            
+            if (appCrashed || overlayError) {
+                window.parent.location.reload();
+            }
+        }
+    });
 </script>
 """)
