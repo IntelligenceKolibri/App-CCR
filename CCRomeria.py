@@ -288,22 +288,22 @@ else:
                 st.session_state.ver_reporte = False
                 st.rerun()
 
-            # Estructura recortada con máscara inferior para tapar la barra flotante de "Compartir"
+            # Estructura con máscara reducida de 30px para tapar únicamente la barra flotante de Power BI de forma exacta
             st.components.v1.html(
                 '''
-                <div style="position: relative; width: 100%; height: 780px; overflow: hidden; border-radius: 15px; background: #0e1117;">
+                <div style="position: relative; width: 100%; height: 560px; overflow: hidden; border-radius: 15px; background: #0e1117;">
                     <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
                             width="100%" 
-                            height="830" 
+                            height="595" 
                             src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsImMiOjR9" 
                             frameborder="0" 
                             allowFullScreen="true"
                             style="position: absolute; top: 0; left: 0; border: none;">
                     </iframe>
-                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; background-color: #0e1117; z-index: 999; pointer-events: auto;"></div>
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 30px; background-color: #0e1117; z-index: 999; pointer-events: auto;"></div>
                 </div>
                 ''',
-                height=790
+                height=570
             )
 
         else:
