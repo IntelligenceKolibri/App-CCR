@@ -286,9 +286,6 @@ else:
         msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
         msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
 
-        # Condición para deshabilitar el enlace si el correo es "123"
-        enlace_reporte = "javascript:void(0);" if correo_base == "123" else "https://drive.google.com/file/d/1mcrDdLxQWIVzo77rfMU1RFJOEad_blNQ/view"
-
         # 1. BOTÓN DE PÁNICO (Arriba de todo)
         st.markdown(f'''
             <div class="app-grid">
@@ -333,7 +330,7 @@ else:
                     </a>
                 ''', unsafe_allow_html=True)
 
-        # 3. RESTO DE LA CUADRÍCULA DE BOTONES
+        # 3. RESTO DE LA CUADRÍCULA DE BOTONES (Sin el botón viejo de Drive)
         st.markdown(f'''
             <div class="app-grid">
                 <a href="tel:911" class="card card-normal">
@@ -348,19 +345,17 @@ else:
                     <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
                 <a href="tel:5555160561" class="card card-normal">
                     <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
-                <a href="{enlace_reporte}" target="_blank" class="card card-normal">
-                    <div class="icon">📊</div><p class="text-normal">REPORTE</p></a>
             </div>
         ''', unsafe_allow_html=True)
 
-        # --- EXPANSOR DE REPORTE POWER BI (Ocultando barra inferior por recorte visual) ---
+        # --- EXPANSOR DE REPORTE POWER BI CORREGIDO ---
         with st.expander("📊 REPORTE DE INGRESOS Y EGRESOS"):
             st.components.v1.html(
                 '''
-                <div style="width: 100%; height: 530px; overflow: hidden; position: relative;">
+                <div style="width: 100%; height: 500px; overflow: hidden; position: relative; background: #ffffff;">
                     <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
                             width="100%" 
-                            height="600" 
+                            height="580" 
                             src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsMiJjOjR9" 
                             frameborder="0" 
                             allowFullScreen="true"
@@ -368,7 +363,7 @@ else:
                     </iframe>
                 </div>
                 ''',
-                height=540
+                height=510
             )
 
         with st.expander("📝 GENERAR PASE QR"):
