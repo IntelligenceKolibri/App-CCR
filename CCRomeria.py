@@ -288,21 +288,22 @@ else:
                 st.session_state.ver_reporte = False
                 st.rerun()
 
-            # Iframe con recorte de márgenes y habilitación de scroll/zoom táctil
+            # Estructura recortada con máscara inferior para tapar la barra flotante de "Compartir"
             st.components.v1.html(
                 '''
-                <div style="width: 100%; height: 530px; overflow: auto; -webkit-overflow-scrolling: touch; position: relative; border-radius: 15px; background: #000000;">
+                <div style="position: relative; width: 100%; height: 780px; overflow: hidden; border-radius: 15px; background: #0e1117;">
                     <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
                             width="100%" 
-                            height="585" 
+                            height="830" 
                             src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsImMiOjR9" 
                             frameborder="0" 
                             allowFullScreen="true"
-                            style="position: absolute; top: 0; left: 0; touch-action: manipulation;">
+                            style="position: absolute; top: 0; left: 0; border: none;">
                     </iframe>
+                    <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 55px; background-color: #0e1117; z-index: 999; pointer-events: auto;"></div>
                 </div>
                 ''',
-                height=540
+                height=790
             )
 
         else:
