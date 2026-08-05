@@ -288,21 +288,21 @@ else:
                 st.session_state.ver_reporte = False
                 st.rerun()
 
-            # Iframe con recorte de CSS para ocultar completamente la barra inferior de Power BI
+            # Iframe con recorte de márgenes y habilitación de scroll/zoom táctil
             st.components.v1.html(
                 '''
-                <div style="width: 100%; height: 580px; overflow: hidden; position: relative; border-radius: 15px; background: #ffffff;">
+                <div style="width: 100%; height: 530px; overflow: auto; -webkit-overflow-scrolling: touch; position: relative; border-radius: 15px; background: #000000;">
                     <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
                             width="100%" 
-                            height="630" 
+                            height="585" 
                             src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsImMiOjR9" 
                             frameborder="0" 
                             allowFullScreen="true"
-                            style="position: absolute; top: 0; left: 0;">
+                            style="position: absolute; top: 0; left: 0; touch-action: manipulation;">
                     </iframe>
                 </div>
                 ''',
-                height=590
+                height=540
             )
 
         else:
@@ -376,7 +376,7 @@ else:
                 </div>
             ''', unsafe_allow_html=True)
 
-            # BOTÓN REPORTE (Alineado con el diseño estético de la cuadrícula)
+            # BOTÓN REPORTE
             if correo_base != "123":
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("📊 REPORTE DE INGRESOS Y EGRESOS", use_container_width=True):
