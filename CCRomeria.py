@@ -353,6 +353,24 @@ else:
             </div>
         ''', unsafe_allow_html=True)
 
+        # --- EXPANSOR DE REPORTE POWER BI (Ocultando barra inferior por recorte visual) ---
+        with st.expander("📊 REPORTE DE INGRESOS Y EGRESOS"):
+            st.components.v1.html(
+                '''
+                <div style="width: 100%; height: 530px; overflow: hidden; position: relative;">
+                    <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
+                            width="100%" 
+                            height="600" 
+                            src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsMiJjOjR9" 
+                            frameborder="0" 
+                            allowFullScreen="true"
+                            style="position: absolute; top: 0; left: 0;">
+                    </iframe>
+                </div>
+                ''',
+                height=540
+            )
+
         with st.expander("📝 GENERAR PASE QR"):
             v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
             v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
