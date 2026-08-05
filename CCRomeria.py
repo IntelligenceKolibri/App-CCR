@@ -44,6 +44,7 @@ st.markdown("""
         align-items: center; justify-content: center; text-align: center;
         text-decoration: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         min-height: 140px; border: 1px solid rgba(255,255,255,0.1);
+        cursor: pointer;
     }
     .card-auxilio { 
         background-color: #d32f2f !important; 
@@ -144,6 +145,8 @@ if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 if 'datos' not in st.session_state:
     st.session_state.datos = None
+if 'ver_reporte' not in st.session_state:
+    st.session_state.ver_reporte = False
 
 # Script inyectado: Mantiene activa la sesión en LocalStorage, corrige teclados e impide que la app se duerma
 html_cookie_handler = """
@@ -278,140 +281,155 @@ else:
             st.rerun()
             
     else:
-        # --- ACCESO CORRECTO ---
-        st.markdown(f"### Hola, {nombre.split()[0]}")
-        
-        msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
-        msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
-        msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
-        msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
+        # --- MÓDULO DE VISTA COMPLETA PARA EL REPORTE POWER BI ---
+        if st.session_state.ver_reporte:
+            st.markdown("### 📊 Reporte de Ingresos y Egresos")
+            if st.button("⬅️ Regresar al Menú Principal"):
+                st.session_state.ver_reporte = False
+                st.rerun()
 
-        # 1. BOTÓN DE PÁNICO (Arriba de todo)
-        st.markdown(f'''
-            <div class="app-grid">
-                <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
-                    <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
-            </div>
-        ''', unsafe_allow_html=True)
-
-        # 2. EXPANSOR DE PAQUETERÍA (Justo abajo de Pánico)
-        with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
-            paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
-            paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
-            paq_comentarios = st.text_input("Comentarios adicionales (opcional):", key="paq_comentarios_form")
-            
-            if st.button("Confirmar", key="btn_confirmar_paq"):
-                v_nom = paq_nombre.strip()
-                v_emp = paq_empresa.strip()
-                v_com = paq_comentarios.strip()
-
-                # Si todo está vacío, envía el mensaje original de siempre
-                if not v_nom and not v_emp and not v_com:
-                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?"
-                else:
-                    detalles = []
-                    if v_nom:
-                        detalles.append(f"a nombre de {v_nom}")
-                    if v_emp:
-                        detalles.append(f"de {v_emp}")
-                    if v_com:
-                        detalles.append(f"Comentarios: {v_com}")
-                    
-                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDAGO8 ? Viene " + ", ".join(detalles)
-                
-                msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
-                url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
-                
-                st.markdown(f'''
-                    <a href="{url_wa}" target="_blank" style="text-decoration:none;">
-                        <div style="background-color: #d32f2f; color: white; padding: 16px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-                            📦 SOLICITAR RECEPCIÓN DE PAQUETE
-                        </div>
-                    </a>
-                ''', unsafe_allow_html=True)
-
-        # 3. RESTO DE LA CUADRÍCULA DE BOTONES (Sin el botón viejo de Drive)
-        st.markdown(f'''
-            <div class="app-grid">
-                <a href="tel:911" class="card card-normal">
-                    <div class="icon">📞</div><p class="text-normal">911</p></a>
-                <a href="tel:5554234418" class="card card-normal">
-                    <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
-                <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
-                    <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
-                <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
-                    <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
-                <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
-                    <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
-                <a href="tel:5555160561" class="card card-normal">
-                    <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
-            </div>
-        ''', unsafe_allow_html=True)
-
-        # --- EXPANSOR DE REPORTE POWER BI CORREGIDO ---
-        with st.expander("📊 REPORTE DE INGRESOS Y EGRESOS"):
+            # Iframe con recorte de CSS para ocultar completamente la barra inferior de Power BI
             st.components.v1.html(
                 '''
-                <div style="width: 100%; height: 500px; overflow: hidden; position: relative; background: #ffffff;">
+                <div style="width: 100%; height: 580px; overflow: hidden; position: relative; border-radius: 15px; background: #ffffff;">
                     <iframe title="Reporte de Ingresos y Egresos Calzada y Cerrada de la Romería" 
                             width="100%" 
-                            height="580" 
-                            src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsMiJjOjR9" 
+                            height="630" 
+                            src="https://app.powerbi.com/view?r=eyJrIjoiYzJiYWEyMzAtYjEyMC00YTQ1LTkzM2ItZTBlNjQ0YzQzMjYwIiwidCI6IjIxMzIxMTkyLWYzNmItNGVmZC05MGY3LWFlOTc2ODExNTNlYyIsImMiOjR9" 
                             frameborder="0" 
                             allowFullScreen="true"
                             style="position: absolute; top: 0; left: 0;">
                     </iframe>
                 </div>
                 ''',
-                height=510
+                height=590
             )
 
-        with st.expander("📝 GENERAR PASE QR"):
-            v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
-            v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
-            v_tipo = st.text_input("Tipo/Modelo de vehículo:", key="v_tipo")
+        else:
+            # --- ACCESO CORRECTO (MENÚ PRINCIPAL) ---
+            st.markdown(f"### Hola, {nombre.split()[0]}")
             
-            if st.button("Generar Pase QR", key="btn_gen_qr"):
-                if v_nom.strip() == "" or v_plat.strip() == "" or v_tipo.strip() == "":
-                    st.warning("Por favor ingresa todos los datos para generar el pase.")
-                else:
-                    datos_qr = f"AUTORIZA: {nombre} | CASA: {casa} | VISITA: {v_nom} | PLACAS: {v_plat} | CARRO: {v_tipo}"
-                    
-                    img = qrcode.make(datos_qr)
-                    buf = BytesIO()
-                    img.save(buf)
-                    
-                    st.image(buf)
-                    st.download_button(
-                        label="📥 Descargar pase para enviar por WhatsApp",
-                        data=buf.getvalue(),
-                        file_name=f"Pase_{v_nom.replace(' ', '_')}.png",
-                        mime="image/png"
-                    )
+            msg_panico = urllib.parse.quote(f"🚨 EMERGENCIA: {nombre} de Casa {casa} NECESITA AYUDA")
+            msg_rep = urllib.parse.quote("Hola, quiero levantar un reporte")
+            msg_anim = urllib.parse.quote("Hola, quiero hacer un reporte")
+            msg_transito = urllib.parse.quote(f"Quiero reportar un automóvil con tránsito.")
 
-        texto_aviso = ""
-        if not df_a.empty and len(df_a.columns) > 0:
-            texto_aviso = str(df_a.iloc[0, 0]).strip()
-        
-        if not texto_aviso:
-            texto_aviso = "No hay avisos vigentes por el momento."
+            # 1. BOTÓN DE PÁNICO (Arriba de todo)
+            st.markdown(f'''
+                <div class="app-grid">
+                    <a href="https://wa.me/{TELEFONO_CONTROL}?text={msg_panico}" target="_blank" class="card card-auxilio">
+                        <div class="icon">🚨</div><p class="text-auxilio">PÁNICO</p></a>
+                </div>
+            ''', unsafe_allow_html=True)
+
+            # 2. EXPANSOR DE PAQUETERÍA (Justo abajo de Pánico)
+            with st.expander("📦 SOLICITAR RECEPCIÓN DE PAQUETE"):
+                paq_nombre = st.text_input("A nombre de quien viene el paquete:", key="paq_nom_form")
+                paq_empresa = st.text_input("Paquetería (ej. Amazon, Mercado Libre, DHL):", key="paq_emp_form")
+                paq_comentarios = st.text_input("Comentarios adicionales (opcional):", key="paq_comentarios_form")
+                
+                if st.button("Confirmar", key="btn_confirmar_paq"):
+                    v_nom = paq_nombre.strip()
+                    v_emp = paq_empresa.strip()
+                    v_com = paq_comentarios.strip()
+
+                    # Si todo está vacío, envía el mensaje original de siempre
+                    if not v_nom and not v_emp and not v_com:
+                        texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ?"
+                    else:
+                        detalles = []
+                        if v_nom:
+                            detalles.append(f"a nombre de {v_nom}")
+                        if v_emp:
+                            detalles.append(f"de {v_emp}")
+                        if v_com:
+                            detalles.append(f"Comentarios: {v_com}")
+                        
+                        texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDAGO8 ? Viene " + ", ".join(detalles)
+                    
+                    msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
+                    url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
+                    
+                    st.markdown(f'''
+                        <a href="{url_wa}" target="_blank" style="text-decoration:none;">
+                            <div style="background-color: #d32f2f; color: white; padding: 16px; border-radius: 12px; text-align: center; font-weight: bold; font-size: 16px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                                📦 SOLICITAR RECEPCIÓN DE PAQUETE
+                            </div>
+                        </a>
+                    ''', unsafe_allow_html=True)
+
+            # 3. RESTO DE LA CUADRÍCULA DE BOTONES
+            st.markdown(f'''
+                <div class="app-grid">
+                    <a href="tel:911" class="card card-normal">
+                        <div class="icon">📞</div><p class="text-normal">911</p></a>
+                    <a href="tel:5554234418" class="card card-normal">
+                        <div class="icon">🏢</div><p class="text-normal">LLAMAR A CASETA</p></a>
+                    <a href="https://wa.me/525619955000?text={msg_rep}" target="_blank" class="card card-normal">
+                        <div class="icon">🛠️</div><p class="text-normal">REPORTAR</p></a>
+                    <a href="https://wa.me/525555335533?text={msg_anim}" target="_blank" class="card card-normal">
+                        <div class="icon">🐾</div><p class="text-normal">PROTECCIÓN ANIMAL</p></a>
+                    <a href="https://wa.me/525543319636?text={msg_transito}" target="_blank" class="card card-normal">
+                        <div class="icon">🚗</div><p class="text-normal">TRÁNSITO</p></a>
+                    <a href="tel:5555160561" class="card card-normal">
+                        <div class="icon">🛡️</div><p class="text-normal">PROTECCIÓN CIVIL</p></a>
+                </div>
+            ''', unsafe_allow_html=True)
+
+            # BOTÓN REPORTE (Alineado con el diseño estético de la cuadrícula)
+            if correo_base != "123":
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("📊 REPORTE DE INGRESOS Y EGRESOS", use_container_width=True):
+                    st.session_state.ver_reporte = True
+                    st.rerun()
+
+            with st.expander("📝 GENERAR PASE QR"):
+                v_nom = st.text_input("Nombre completo del visitante:", key="v_nom")
+                v_plat = st.text_input("Placas del vehículo:", key="v_plat").upper()
+                v_tipo = st.text_input("Tipo/Modelo de vehículo:", key="v_tipo")
+                
+                if st.button("Generar Pase QR", key="btn_gen_qr"):
+                    if v_nom.strip() == "" or v_plat.strip() == "" or v_tipo.strip() == "":
+                        st.warning("Por favor ingresa todos los datos para generar el pase.")
+                    else:
+                        datos_qr = f"AUTORIZA: {nombre} | CASA: {casa} | VISITA: {v_nom} | PLACAS: {v_plat} | CARRO: {v_tipo}"
+                        
+                        img = qrcode.make(datos_qr)
+                        buf = BytesIO()
+                        img.save(buf)
+                        
+                        st.image(buf)
+                        st.download_button(
+                            label="📥 Descargar pase para enviar por WhatsApp",
+                            data=buf.getvalue(),
+                            file_name=f"Pase_{v_nom.replace(' ', '_')}.png",
+                            mime="image/png"
+                        )
+
+            texto_aviso = ""
+            if not df_a.empty and len(df_a.columns) > 0:
+                texto_aviso = str(df_a.iloc[0, 0]).strip()
             
-        st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{texto_aviso}</div>', unsafe_allow_html=True)
+            if not texto_aviso:
+                texto_aviso = "No hay avisos vigentes por el momento."
+                
+            st.markdown(f'<div class="aviso"><strong>📢 AVISO:</strong><br>{texto_aviso}</div>', unsafe_allow_html=True)
 
-        # --- AVISO DE PRIVACIDAD DISCRETO AL FINAL ---
-        st.markdown("""
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;">
-        <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: justify; line-height: 1.4; padding: 0 10px; margin-bottom: 20px;">
-            <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Sus datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operación de esta comunidad.
-        </div>
-        """, unsafe_allow_html=True)
+            # --- AVISO DE PRIVACIDAD DISCRETO AL FINAL ---
+            st.markdown("""
+            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; margin-bottom: 20px;">
+            <div style="font-size: 11px; color: rgba(255,255,255,0.4); text-align: justify; line-height: 1.4; padding: 0 10px; margin-bottom: 20px;">
+                <strong>Aviso de Privacidad:</strong> La Coordinación de Calzada y Cerrada de la Romería (CCR) es responsable del tratamiento de los datos personales proporcionados por los residentes. Sus datos de identificación y contacto (correo electrónico y/o teléfono) serán utilizados única y exclusivamente para validar el acceso y garantizar la seguridad dentro de la aplicación. Sus datos no serán compartidos, transferidos ni utilizados para ningún otro fin ajeno a la operación de esta comunidad.
+            </div>
+            """, unsafe_allow_html=True)
 
-        if st.button("Cerrar Sesión"):
-            st.session_state.autenticado = False
-            st.session_state.datos = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
-            st.rerun()
+            if st.button("Cerrar Sesión"):
+                st.session_state.autenticado = False
+                st.session_state.datos = None
+                st.session_state.ver_reporte = False
+                st.query_params.clear()
+                st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
+                st.rerun()
 
 # --- AUTO-REFRESCO PARA EVITAR QUE SE DUERMA LA APP Y AJUSTES DE TECLADO ---
 st.html("""
