@@ -320,7 +320,7 @@ else:
                     if v_com:
                         detalles.append(f"Comentarios: {v_com}")
                     
-                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDPAG7 ? Viene " + ", ".join(detalles)
+                    texto_solicitud = f"Hola, soy {nombre} de Casa {casa}, ¿me podrían recibir un paquete IDAGO8 ? Viene " + ", ".join(detalles)
                 
                 msg_solicitud_encoded = urllib.parse.quote(texto_solicitud)
                 url_wa = f"https://wa.me/{TELEFONO_CONTROL}?text={msg_solicitud_encoded}"
