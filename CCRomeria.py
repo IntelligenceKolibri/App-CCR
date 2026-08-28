@@ -111,14 +111,6 @@ st.markdown("""
         background-color: rgba(255, 243, 205, 0.1); border-radius: 10px; padding: 15px;
         margin-top: 30px; color: #ffffff; border-left: 5px solid #ffc107;
     }
-    .bloqueo-dispositivo {
-        background-color: rgba(255, 193, 7, 0.1); border-radius: 15px; padding: 25px;
-        color: #ffffff; border: 2px solid #ffc107; text-align: center; margin-top: 20px;
-    }
-    .codigo-token {
-        font-size: 24px; font-weight: bold; color: #ffc107 !important; 
-        background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; display: inline-block; margin: 15px 0;
-    }
     h1, h3, p, span, label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -202,14 +194,6 @@ if "user" in query_params and not st.session_state.autenticado:
             st.session_state.datos = u.iloc[0]
             st.session_state.autenticado = True
 
-# --- GENERADOR DE ID DE DISPOSITIVO REAL (Navegador + Huella digital) ---
-headers = st.context.headers
-user_agent = headers.get("User-Agent", "Desconocido")
-accept_language = headers.get("Accept-Language", "es")
-huella_digital = f"{user_agent}-{accept_language}"
-hash_dispositivo = hashlib.md5(huella_digital.encode()).hexdigest().upper()
-id_del_celular_actual = f"CCR-{hash_dispositivo[:5]}-DISP"
-
 if st.session_state.autenticado and st.session_state.datos is not None:
     correo_base = str(st.session_state.datos.iloc[0]).strip().lower()
 elif 'ccr_email_input' in st.session_state and st.session_state.ccr_email_input:
@@ -239,15 +223,6 @@ else:
     nombre, casa = u.iloc[1], u.iloc[2]
     
     esta_pagado = "pagado" in str(u.iloc[3]).lower()
-    
-    # --- FILTRO DE CONTROL ULTRA ESTRICTO ---
-    contenido_celda_dispositivo = str(u.iloc[7]).strip()
-    ids_autorizados = [i.strip() for i in contenido_celda_dispositivo.split(",") if i.strip()]
-    
-    if not ids_autorizados or contenido_celda_dispositivo in ["", "-", "PENDIENTE"]:
-        dispositivo_valido = False
-    else:
-        dispositivo_valido = id_del_celular_actual in ids_autorizados
 
     if not esta_pagado:
         st.markdown(f"""
@@ -257,23 +232,6 @@ else:
             </div>
         """, unsafe_allow_html=True)
         if st.button("Cerrar"):
-            st.session_state.autenticado = False
-            st.session_state.datos = None
-            st.query_params.clear()
-            st.html("""<script>localStorage.removeItem('ccr_ios_mail'); window.parent.location.reload();</script>""")
-            st.rerun()
-            
-    elif not dispositivo_valido:
-        st.markdown(f"""
-            <div class="bloqueo-dispositivo">
-                <h2>🔒 Dispositivo No Vinculado</h2>
-                <p>Hola <b>{nombre}</b>, este dispositivo no está autorizado para usar tu cuenta.</p>
-                <p>Para solicitar el acceso, envía este código exacto a la <b>coordinación</b>:</p>
-                <div class="codigo-token">{id_del_celular_actual}</div>
-                <p>Una vez validado, podrás ingresar a la plataforma.</p>
-            </div>
-        """, unsafe_allow_html=True)
-        if st.button("Salir"):
             st.session_state.autenticado = False
             st.session_state.datos = None
             st.query_params.clear()
@@ -460,3 +418,4 @@ st.html("""
     });
 </script>
 """)
+
