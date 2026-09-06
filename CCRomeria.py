@@ -204,7 +204,7 @@ else:
 st.markdown('<div class="titulo-grande">🏠 Intranet CCR</div>', unsafe_allow_html=True)
 
 if not st.session_state.autenticado:
-    email_input = st.text_input("Ingresa tu correo:", key="ccr_email_input").strip().lower()
+    email_input = st.text_input("Ingresa tu usuario:", key="ccr_email_input").strip().lower()
     if st.button("Entrar"):
         if not df.empty:
             df.iloc[:, 0] = df.iloc[:, 0].astype(str).str.strip().str.lower()
